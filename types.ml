@@ -1,7 +1,7 @@
 type alpha = string
 
 type t = [
-    | `TypeVar of alpha
+    | `TVar of alpha
     | `Int 
     | `Bool
     | `Prod of t * t 
@@ -10,7 +10,7 @@ type t = [
 
 type tau = [ 
     | `Dyn
-    | `TypeVar of alpha
+    | `TVar of alpha
     | `Int 
     | `Bool
     | `Prod of tau * tau
@@ -48,22 +48,22 @@ let pprint_p : p -> string = function
     | Neg (n, m) | Pos (n, m) -> Printf.sprintf "(%s, %s)" (string_of_int n) (string_of_int m)
 
 let pprint_alpha_vector : alpha_vector -> string = 
-    fun av -> String.concat " ; " av
+    fun av -> "[" ^ (String.concat " ; " av) ^ "]"
 
 let rec pprint_t : t -> string = function
     | `Bool -> "Bool"
-    | `TypeVar al -> al
+    | `TVar al -> al
     | `Prod (t1, t2) -> Printf.sprintf "(%s, %s)" (pprint_t t1) (pprint_t t2)
     | `Int -> "Int"
-    | `Arr (t1, t2) -> Printf.sprintf "%s -> %s" (pprint_t t1) (pprint_t t2)
+    | `Arr (t1, t2) -> Printf.sprintf "%s 🡒 %s" (pprint_t t1) (pprint_t t2)
 
 let rec pprint_tau : tau -> string = function
     | `Dyn -> "?"
     | `Bool -> "Bool"
-    | `TypeVar al -> al
+    | `TVar al -> al
     | `Prod (t1, t2) -> Printf.sprintf "(%s, %s)" (pprint_tau t1) (pprint_tau t2)
     | `Int -> "Int"
-    | `Arr (t1, t2) -> Printf.sprintf "%s -> %s" (pprint_tau t1) (pprint_tau t2)
+    | `Arr (t1, t2) -> Printf.sprintf "%s 🡒 %s" (pprint_tau t1) (pprint_tau t2)
 
 let pprint_t_vector : t_vector -> string = fun tv ->   
     let stv = List.map pprint_t tv in
@@ -75,7 +75,7 @@ let rec pprint_e : e -> string = function
                 | `I n -> string_of_int n
                 | `B b -> string_of_bool b)
     | Lam (t1, t2, x, e) -> 
-        Printf.sprintf "λ %s . %s : %s -> %s" x (pprint_e e) (pprint_tau t1) (pprint_tau t2)
+        Printf.sprintf "λ %s . %s : %s 🡒 %s" x (pprint_e e) (pprint_tau t1) (pprint_tau t2)
     | App (e1, e2) -> 
         Printf.sprintf "(%s) %s" (pprint_e e1) (pprint_e e2)
     | Prd (e1, e2) ->
@@ -90,9 +90,10 @@ let rec pprint_e : e -> string = function
         Printf.sprintf "Λ %s . %s" (pprint_alpha_vector av) (pprint_e e)
     | TApp (e, tv) ->
         Printf.sprintf "(%s) [%s]" (pprint_e e) (pprint_t_vector tv)
-    | Cast (e, tau1, p, tau2) ->
-        Printf.sprintf "%s <%s => %s> %s" (pprint_e e) (pprint_tau tau1) (pprint_tau tau2) (pprint_p p)
-
+    | Cast (e, tau1, p, tau2) ->    
+        match e with
+        | Lam _ -> Printf.sprintf "(%s) 〈%s ==[%s]==> %s〉" (pprint_e e) (pprint_tau tau1) (pprint_p p) (pprint_tau tau2) 
+        | _ -> Printf.sprintf "%s 〈%s ==[%s]==> %s〉" (pprint_e e) (pprint_tau tau1)  (pprint_p p) (pprint_tau tau2)
 
 let print_e : e -> unit = 
     fun e -> print_string (pprint_e e)
