@@ -168,4 +168,5 @@ let typeof = function
     | `Cst (`I _) -> `Int
     | `Cst (`B _) -> `Bool 
     | `Lam (tau1, tau2, _, _) -> `Arr (tau1, tau2)
+    | `TwoCast (`Lam (tau1, tau2, _, _), tau_i, _) -> `And (`Arr (tau1, tau2), tau_i)
     | _ -> failwith "Not a value"
