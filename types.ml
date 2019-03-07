@@ -83,7 +83,8 @@ type e' = [
     | `TwoCast of e' * tau' * tau'
     ]
 
-(* Boolean functions to determine the value among these terms *)
+(* Values *)
+
 type u = [ `Lam of tau' * tau' * x * e']
 type value = [ u | `Cst of b | `TwoCast of u * tau' * tau' ]
 
