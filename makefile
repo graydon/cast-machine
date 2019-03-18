@@ -1,5 +1,14 @@
+.PHONY: main main_byte
+
 all:
-	ocamlc -o main.exe types.ml main.ml
+	ocamlbuild -use-menhir -use-ocamlfind \
+	-cflags '-I '`pwd`/../cduce/lib/ \
+	-lflags '-I '`pwd`'/../cduce/lib/ 'cduce_lib.cmxa \
+	main.native \
+	-package expat -package pxp -package curl \
+	-package camlp4 -package camlp4.lib \
+	-package num
+
 
 clean:
 	rm -rf *.cmi *.cmo
