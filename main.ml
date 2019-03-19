@@ -1,4 +1,5 @@
 open Types
+open Casts
 
 let tt = `Cst (`B true)
 let ff = `Cst (`B false) 
@@ -8,6 +9,7 @@ let al = "α"
 let beta = "β"
 let x = `Var "x"
 let dyn_fun = `Arr (`Dyn, `Dyn)
+
 
 let _ =
     let examples = 
