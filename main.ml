@@ -1,5 +1,9 @@
-open Types
-open Casts
+(* open Types *)
+(* open Casts.SE_CDuce *)
+open Old_print
+(* open Print *)
+
+
 
 let tt = `Cst (`B true)
 let ff = `Cst (`B false) 
@@ -11,6 +15,7 @@ let x = `Var "x"
 let dyn_fun = `Arr (`Dyn, `Dyn)
 
 
+(* POPL19 with naive types *)
 let _ =
     let examples = 
         [
@@ -31,6 +36,7 @@ let _ =
     print_string "Cast expressions:\n";
     List.iter (fun e -> print_e e; print_endline "") examples
 
+(* SE with naive types *)
 let _ = 
     let examples = 
         [
@@ -51,3 +57,15 @@ let _ =
         ] in
     print_string "\nOther cast expressions:\n";
     List.iter (fun e -> print_e e; print_endline "") examples
+
+open Print
+open Casts
+
+(* SE with CDuce types *)
+let _ = 
+    let examples = 
+        [ `Var (fresh_var ());
+          `Var (fresh_var ())] in
+    print_string "\nCast expressions with CDuce types:\n";
+    List.iter (fun e -> print_e e; print_endline "") examples
+
