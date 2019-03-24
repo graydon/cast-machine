@@ -1,11 +1,22 @@
-.PHONY: main main_byte
+# Frontend to dune.
 
-all:
-	ocamlbuild -classic-display -use-menhir -use-ocamlfind \
-	-lflag -thread -cflag -thread \
-	-package num,expat,curl,pxp,cduce,utop,ocaml-compiler-libs.toplevel,threads \
-	main.byte
+.PHONY: default build install uninstall test clean
+
+default: build
+
+build:
+	dune build
+
+test:
+	dune runtest -f
+
+install:
+	dune install
+
+uninstall:
+	dune uninstall
 
 clean:
-	rm -rf *.cmi *.cmo
-	rm -rf main.exe
+	dune clean
+# Optionally, remove all files/folders ignored by git as defined
+# in .gitignore (-X)
