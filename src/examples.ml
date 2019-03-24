@@ -1,6 +1,7 @@
+
+open Old_print
 (* open Types *)
 (* open Casts.SE_CDuce *)
-open Old_print
 (* open Print *)
 
 
@@ -68,4 +69,5 @@ let _ =
           `Var (fresh_var ())] in
     print_string "\nCast expressions with CDuce types:\n";
     List.iter (fun e -> print_e e; print_endline "") examples
+
 

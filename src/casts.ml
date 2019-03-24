@@ -1,6 +1,6 @@
 (* TODO: fonctoriser ce truc pour lui donner un type tau générique *)
 (* TODO: se brancher sur le système de types de CDuce *)
-open Types
+open Syntax
 module CD = Cduce_lib
 
 let fresh_var () =
@@ -12,8 +12,8 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
     type t = CD.Types.t
     type var = CD.Var.t
     type varset = CD.Var.Set.t
-    type subst = CD.Types.Subst.t
-
+    (* type subst = CD.Types.Subst.t *)
+    type b = CD.Intervals.elem (* surely false *)
 
     (* Idée: à la manière des schemes de Tommaso, 
     implémenter les types graduels comme des types
@@ -23,7 +23,11 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
     t: t;
     a: varset; (* type variables *)
     dv: varset; (* dynamic variables *)
-    }
+    }    
+
+
 end
 
-module SE_CDuce = (Make_Cast_Language(CDuce_Dynamic_Types))(Make_SE)
+module SE_CDuce = Make_Cast_Language(CDuce_Dynamic_Types)(Make_SE)
+
+let bla = 1

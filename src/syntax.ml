@@ -4,11 +4,14 @@ module type Dynamic_Type = sig
     (* type x  *)
     (* variable *)
     type var
-    (* type b *)
+    type b
     (* type alpha  *)
     (* type variable *)
     type t (* static type *)
     type tau (* dynamic type *)
+
+    (* val ceil : tau -> t
+    val floor : tau -> t *)
 end
 
 module type Cast_Expr = sig
@@ -17,7 +20,7 @@ module type Cast_Expr = sig
     type alpha_vector
     type t_vector
     type e (* cast expressions *)
-    type v (* values *)
+    (* type v *)
 end
 
 module type Cast_Language = sig
@@ -77,7 +80,6 @@ module Make_POPL19 (Init_Type : Dynamic_Type) : Cast_Expr = struct
     include Init_Type
     type alpha_vector = Init_Type.var list
     type t_vector = Init_Type.t list
-    type b = [ `I of int | `B of bool ]
     type p =    (* blame label *)
             [ | `Simple of int
             | `Pos of int * int
@@ -94,7 +96,9 @@ module Make_POPL19 (Init_Type : Dynamic_Type) : Cast_Expr = struct
         | `TLam of alpha_vector * e
         | `TApp of e * t_vector
         | `Cast of e * tau * p * tau ]
-    type v = int
+    (* type v = int *)
+    (* type env = int *)
+    (* let create () = 0 *)
     end
 
 (* Victor's types and expressions from "Space-efficient [...]" notes *)
@@ -111,7 +115,7 @@ module SE_Types : Dynamic_Type = struct
         | `And of t * t
         | `Neg of t
         | `Empty ]
-
+    type b = [ `I of int | `B of bool ]
     type tau = 
       [ | `Dyn
         | `TVar of var
@@ -127,28 +131,32 @@ end
 module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
     include Init_Type
     type alpha_vector = Init_Type.var list
-    type b = [ `I of int | `B of bool ]
     type t_vector = Init_Type.t list
 
     type p =    (* blame label *)
-            | Simple of int
-            | Pos of int * int
-            | Neg of int * int
-
+           [ | `Simple of int
+            | `Pos of int * int
+            | `Neg of int * int ]
+(* hi *)
     type e = 
       [ | `Var of var
         | `Cst of b
         | `Lam of tau * tau * var * e
         | `App of e * e
-        | `Prd of e * e
-        | `Pi1 of e
-        | `Pi2 of e
-        | `Let of var * e * e
-        | `TLam of alpha_vector * e
-        | `TApp of e * t_vector
-        | `TwoCast of e * tau * tau ]
+        | `Cast of e * tau
+        | `TwoCast of e * tau * tau
+        (* for now no product, let and type abstraction *)
+        (* | `Prd of e * e *)
+        (* | `Pi1 of e *)
+        (* | `Pi2 of e *)
+        (* | `Let of var * e * e *)
+        (* | `TLam of alpha_vector * e *)
+        (* | `TApp of e * t_vector *)
+        ]
 
-    type v = int 
+    
+    (* let create () = Hashtbl.create 50
+    let add tbl x y = Hashtbl.add tbl x y *)
 end
 
 (* Old values *)
