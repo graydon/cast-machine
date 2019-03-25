@@ -4,10 +4,11 @@ include Casts
 include Primitives
 include Interpreter
 open Types
-
 open CD.Intervals.V
 
+module CD = Cduce_lib
 
+(* let is_dynamic t = CD.Types.Atom.has_atom t dyn_atom *)
 (* from CD.Intervals.V *)
 let zer = CD.Types.Integer (CD.Intervals.V.zero)
 let uno = CD.Types.Integer (CD.Intervals.V.succ zero)
@@ -17,7 +18,8 @@ let examples =
     [ `Var (fresh_var ());
       `Var (fresh_var ());
       `Cst zer;
-      `Cst uno
+      `Cst uno;
+      `Lam (var (fresh_dyn_var ()), var (fresh_dyn_var ()), fresh_var (), `Cst zer)
     ]
 
 let show_examples () =

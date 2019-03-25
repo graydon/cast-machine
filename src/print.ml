@@ -1,5 +1,6 @@
 open Casts
 open Types
+open Primitives
 
 module type Type_Print = sig
     type var 
@@ -20,10 +21,22 @@ module type Type_Print_CD = Type_Print
 
 module SE_TPrint : Type_Print_CD = 
 struct 
-    let pprint_t = CD.Types.Print.string_of_type
-    let pprint_var = CD.Var.ident
+    let pprint_t t = 
+        (* gives ident [?] to all dynamic type variables 
+        in order to print them *)
+        let t' =
+            let av = CD.Types.all_vars t in
+            let dv = 
+                CD.Var.Set.filter (fun v -> 
+                    (CD.Var.ident v).[0] = 'd') av
+            in
+            CD.Types.Subst.full_list t 
+                (List.map (fun v -> (v, mk_var "?")) (CD.Var.Set.get dv))
+            in CD.Types.Print.string_of_type t'
+    let pprint_var = CD.Var.ident 
     let pprint_tau = fun _ -> "tau"
-    let pprint_cst c = Format.printf "%a\n" CD.Types.Print.pp_const c; ""
+    let pprint_cst c = 
+        CD.Types.Print.pp_const (Format.str_formatter) c; Format.flush_str_formatter ()
 end
 
 (** Useless functor; but gives the beginning of current Print modules *)

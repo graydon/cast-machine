@@ -12,13 +12,14 @@ module type Dynamic_Type = sig
 
     (* val ceil : tau -> t
     val floor : tau -> t *)
-    val subtype : t -> t -> bool
+    (* val subtype : t -> t -> bool *)
     
     type subst
     val subst : t -> (var * t) list -> t
 
-    val ceil_naive : tau -> t
-    val floor_naive : tau -> t
+    (* val proj : t -> tau *)
+    val ceil : tau -> t
+    val floor : tau -> t
 end
 
 module type Cast_Expr = sig

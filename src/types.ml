@@ -14,6 +14,10 @@ let fresh_var () =
   let n = Oo.id (object end) in
   CD.Var.mk ~internal:false (Printf.sprintf "a%04d" n)
 
+let fresh_dyn_var () =
+  let n = Oo.id (object end) in
+  CD.Var.mk ~internal:false (Printf.sprintf "d%04d" n)
+
 let fresh_var_type () = CD.Types.var (fresh_var ())
 
 let apply_subst theta t = CD.Types.Subst.full t theta
