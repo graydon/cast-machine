@@ -6,18 +6,16 @@ open Print
 include Interpreter
 module CD = Cduce_lib
 
-open CD.Intervals.V
 open Eager_Calculus
 
-
-(* let is_dynamic t = CD.Types.Atom.has_atom t dyn_atom *)
-(* from CD.Intervals.V *)
-let zer = CD.Types.Integer (CD.Intervals.V.zero)
+open CD.Intervals.V
+(* Using CD.Intervals.V.zero etc. *)
+let zer = CD.Types.Integer (zero)
 let uno = CD.Types.Integer (succ zero)
 let deux = CD.Types.Integer (succ @@ succ zero)
 let un_et_deux = CD.Types.Pair (uno, deux)
 
-let vfresh = Var (fresh_var ())
+let v1 = Var (fresh_var ())
 let f1 = Lam (qmark (), qmark (), mk_var "x", Cst zer)
 let cast1 = Cast (f1, qmark ())
 
@@ -32,18 +30,17 @@ let examples =
       Cst un_et_deux;
     ]
 
-let c1 = constant uno
+let c1 = constant uno (* le type singleton 1 *)
 let c0 = constant zer
-let un_ou_deux = cup c0 c1
+let un_ou_deux = cup c0 c1 (* le type 1--2 *)
 
-let example_types =
-    [
+let example_types = [
         qmark ();
         qfun ();
         constant un_et_deux;
         c1;
         un_ou_deux
-    ]
+        ]
 
 let show_examples () =
     print_string "Cast expressions with CDuce types:\n";
@@ -57,8 +54,7 @@ let i0 = Cst zer
 let i1 = Cst uno
 let cast0 = TwoCast (i0, qmark (), qmark ())
 
-let running_examples = 
-        [
+let running_examples = [
         i0;
         i1;
         f1;

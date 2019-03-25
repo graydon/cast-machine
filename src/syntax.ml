@@ -94,10 +94,8 @@ end
 
 module type Cast_Language = sig
     include Cast_Expr
-    (* other constructs of the language *)
-    val is_value : e -> bool
-    (* val pprint_e : [< `Var of string ]  -> string  *)
-    (** TODO : find a way to define the signature of pprint_e and print_e
+    
+    (** DONE : find a way to define the signature of pprint_e and print_e
         that is compatible with the open variant used to define the function
         Here I found a way by adding a single constructor, but I would have like
         to use an "empty open variant" [< ] of which every open variant would be
@@ -109,49 +107,12 @@ module type Cast_Language = sig
         which has type
             [> `Var of string | `Cst of b ]
         then this type is not a subtype of [< `Var of string ] *)
-    (* val print_e : [< `Var of string ]  -> unit *)
+      (** Conclusion: switched from variants to constructors, and 
+      defined print_e elsewhere after importing this module. *)
 end
-
-(* dummy testing of the module signatures *)
-(* module Test (Init_Type : Dynamic_Type) : (Dynamic_Type -> Cast_Expr) = 
-    functor (DT : Dynamic_Type) ->
-    struct
-        include DT
-        type t_vector = int
-        type alpha_vector = int
-        type e = int
-        type v = int
-        type p = int
-    end *)
 
 module type Make_Cast_Expr = Dynamic_Type -> Cast_Expr
 
-(* Victor's types and expressions from "Space-efficient [...]" notes *)
-
-(* mdodule SE_Types = struct 
-    (* type var = string *)
-    type var = string
-    type t = 
-      [ | `TVar of var
-        | `Int 
-        | `Bool
-        | `Arr of t * t
-        | `Or of t * t
-        | `And of t * t
-        | `Neg of t
-        | `Empty ]
-    type b = [ `I of int | `B of bool ]
-    type tau = 
-      [ | `Dyn
-        | `TVar of var
-        | `Int 
-        | `Bool
-        | `Arr of tau * tau
-        | `Or of tau * tau
-        | `And of tau * tau
-        | `Neg of tau
-        | `Empty ]
-end *)
 
 module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
     include Init_Type
@@ -182,12 +143,36 @@ module Make_Cast_Language (Init_Type : Dynamic_Type) : (Make_Cast_Expr -> Cast_L
     functor (MCE : Make_Cast_Expr) -> 
     struct
         include MCE(Init_Type)
-        let is_value = fun _ -> true
 end
 
 module SE_CDuce = Make_Cast_Language(CDuce_Dynamic_Types)(Make_SE)
 
+(* A naive implem of Victor's types and expressions from "Space-efficient [...]" notes *)
 
+(* module SE_Types = struct 
+    (* type var = string *)
+    type var = string
+    type t = 
+      [ | `TVar of var
+        | `Int 
+        | `Bool
+        | `Arr of t * t
+        | `Or of t * t
+        | `And of t * t
+        | `Neg of t
+        | `Empty ]
+    type b = [ `I of int | `B of bool ]
+    type tau = 
+      [ | `Dyn
+        | `TVar of var
+        | `Int 
+        | `Bool
+        | `Arr of tau * tau
+        | `Or of tau * tau
+        | `And of tau * tau
+        | `Neg of tau
+        | `Empty ]
+end *)
 
 
 (* module POPL19_Types = struct

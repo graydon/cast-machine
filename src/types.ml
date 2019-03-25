@@ -1,7 +1,3 @@
-(* Modified file from Tommasso's work on setvariants *)
-
-(* open Utils *)
-
 module CD = Cduce_lib
 
 type t = CD.Types.t
@@ -20,7 +16,7 @@ let fresh_dyn_var () =
 
 let fresh_var_type () = CD.Types.var (fresh_var ())
 
-let apply_subst theta t = CD.Types.Subst.full t theta
+(* let apply_subst theta t = CD.Types.Subst.full t theta
 
 let simpl t =
   let vars = CD.Types.all_vars t in
@@ -190,4 +186,4 @@ let pp_env' pp_content ppf env =
   Format.fprintf ppf "@]}"
 
 let pp_env = pp_env' pp_scheme
-let pp_mono_env = pp_env' pp_type
+let pp_mono_env = pp_env' pp_type *)

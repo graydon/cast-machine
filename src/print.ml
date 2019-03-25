@@ -2,7 +2,6 @@ open Syntax
 open Syntax.SE_CDuce
 open Primitives
 
-
 module type Type_Print = sig
     type var 
     type t
@@ -20,10 +19,10 @@ module type Type_Print_CD = Type_Print
     and type tau := tau
     and type b := Types.b
 
-module SE_TPrint : Type_Print_CD = 
+module SE_Print : Type_Print_CD = 
 struct 
     let pprint_t t = 
-        (* gives ident [?] to all dynamic type variables 
+        (* hacky: gives ident [?] to all dynamic type variables 
         in order to print them *)
         let t' =
             let av = CD.Types.all_vars t in
@@ -41,8 +40,8 @@ struct
 end
 
 (** Useless functor; but gives the beginning of current Print modules *)
-module Make_PPrint = functor (TPrint : Type_Print_CD) -> struct
-    include TPrint
+module Make_Print = functor (Print : Type_Print_CD) -> struct
+    include Print
 
     let pprint_p = function 
         | `Simple n -> string_of_int n
@@ -50,18 +49,6 @@ module Make_PPrint = functor (TPrint : Type_Print_CD) -> struct
 
     let pprint_alpha_vector = 
         fun av -> "[" ^ (String.concat " ; " av) ^ "]"
-(* 
-    let rec pprint_type  = function
-        | `Dyn -> "?"
-        | `Bool -> "Bool"
-        | `TVar al -> al
-        | `Prod (t1, t2) -> Printf.sprintf "(%s, %s)" (pprint_type t1) (pprint_type t2)
-        | `Int -> "Int"
-        | `Arr (t1, t2) -> Printf.sprintf "%s 🡒  %s" (pprint_type t1) (pprint_type t2)
-        | `Or (t1, t2) -> Printf.sprintf "%s ∨ %s" (pprint_type t1) (pprint_type t2)
-        | `And (t1, t2) -> Printf.sprintf "%s ∧ %s" (pprint_type t1) (pprint_type t2)
-        | `Neg t1 -> Printf.sprintf "¬%s" (pprint_type t1) 
-        | `Empty -> "𝟘" *)
 
     let pprint_t_vector  = fun tv ->   
         let stv = List.map pprint_t tv in
@@ -72,12 +59,8 @@ module Make_PPrint = functor (TPrint : Type_Print_CD) -> struct
         | _ -> ""
 
     let rec (pprint_e : SE_CDuce.e -> string) = function
-        (* | #SE_CDuce.e as e -> "" *)
         | Var var -> pprint_var var
         | Cst b -> pprint_cst b
-                    (* begin match b with
-                    | `I n -> string_of_int n
-                    | `B b -> string_of_bool b end *)
         | Lam (tau1, tau2, var, e) -> 
             Printf.sprintf "(λ %s . %s) : %s 🡒  %s" (pprint_var var) (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
         | App (e1, e2) -> 
@@ -103,17 +86,10 @@ module Make_PPrint = functor (TPrint : Type_Print_CD) -> struct
             Printf.sprintf "Λ %s . %s" (pprint_alpha_vector av) (pprint_e e)
         | `TApp (e, tv) ->
             Printf.sprintf "(%s) [%s]" (pprint_e e) (pprint_t_vector tv) *)
-        (* | `CCast (e, tau1, p, tau2) ->    
-            let s_format : _ format =
-                begin match e with
-                | `Lam _ ->     "(%s) 〈%s ==[%s]==> %s 〉" (* careful: influences the variant type *)
-                | _ ->          "%s 〈%s ==[%s]==> %s 〉" end
-            in Printf.sprintf s_format (pprint_e e) (pprint_tau tau1) (pprint_p p) (pprint_tau tau2)  *)
-        
 
     let print_e = function e -> print_string (pprint_e e)
     let print_t = fun t -> print_string (pprint_t t)
 end
 
-module PPrint = Make_PPrint(SE_TPrint)
-include PPrint
+module Print = Make_Print(SE_Print)
+include Print

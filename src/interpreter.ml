@@ -1,35 +1,30 @@
 (* Interpreter written using big step semantics *)
-
 open Primitives
 open Syntax
 open SE_CDuce
 open Print
 
+(* Working interpreter - this is the more eager version
+of the space-efficient semantics *)
 module Eager_Calculus = struct
 
-    module Env = Map.Make(
-        struct 
+    module Env = Map.Make(struct 
             type t = var
-            let compare = Pervasives.compare
-        end
-    )
-
+            let compare = Pervasives.compare end)
     type twosome =
         | I of tau * tau
         | T of tau * tau
-
     type v = 
-            [ | `Cst of b 
-            | `Closure of (tau * tau * var * e) * twosome * env
-            | `Fail
-            ]
+        [ | `Cst of b 
+        | `Closure of (tau * tau * var * e) * twosome * env
+        | `Fail
+        ]
     and env = v Env.t
 
     let inter ts (t1,t2) = match ts with
         | T (t1', t2') | I (t1', t2') -> T (cap t1 t1', cap t2 t2')
-    (* let check_ceil c tau = SE_CDuce.subtype  *)
-
-    let (typeof : v -> t) = function
+        
+    let typeof : v -> t = function
         | `Cst b -> constant b
         | `Closure (_, (I (t1', t2') | T (t1', t2')), _) -> 
             arrow (cons t1') (cons t2')
@@ -75,6 +70,7 @@ module Eager_Calculus = struct
         print_endline "\n"
 end
 
+(* Lazier version (todo) *)
 module Lazy_Calculus = struct
     module Env = Map.Make(
             struct 
@@ -112,3 +108,7 @@ module Lazy_Calculus = struct
             ]
     and env = v Env.t
 end 
+
+(* Symbolic version (todo) *)
+module Symbolic_Calculus = struct
+end
