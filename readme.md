@@ -19,6 +19,8 @@ And to run it
     make top
 ```
 
+## Issues
+
 Had a few strange bugs, among them:
 ```
     Error: File unavailable: ~/.opam/4.07.0/lib/cduce/+camlp4/camlp4lib.cma
