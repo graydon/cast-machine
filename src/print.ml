@@ -1,24 +1,29 @@
 open Casts
+open Types
 
 module type Type_Print = sig
     type var 
     type t
     type tau 
+    type b
     val pprint_t : t -> string
     val pprint_tau : tau -> string
     val pprint_var : var -> string
+    val pprint_cst : b -> string
 end
 
 module type Type_Print_CD = Type_Print 
-    with type t := CD.Types.t 
-    and type var := CD.Var.t
+    with type t := Types.t 
+    and type var := Types.var
     and type tau := SE_CDuce.tau
+    and type b := Types.b
 
 module SE_TPrint : Type_Print_CD = 
 struct 
     let pprint_t = CD.Types.Print.string_of_type
     let pprint_var = CD.Var.ident
     let pprint_tau = fun _ -> "tau"
+    let pprint_cst c = Format.printf "%a\n" CD.Types.Print.pp_const c; ""
 end
 
 (** Useless functor; but gives the beginning of current Print modules *)
@@ -50,9 +55,10 @@ module Make_PPrint = functor (TPrint : Type_Print_CD) -> struct
 
     let rec pprint_e = function
         | `Var var -> pprint_var var
-        | `Cst b -> begin match b with
+        | `Cst b -> pprint_cst b
+                    (* begin match b with
                     | `I n -> string_of_int n
-                    | `B b -> string_of_bool b end
+                    | `B b -> string_of_bool b end *)
         | `Lam (t1, t2, var, e) -> 
             Printf.sprintf "λ %s . %s : %s 🡒  %s" (pprint_var var) (pprint_e e) (pprint_t t1) (pprint_t t2)
         | `App (e1, e2) -> 
@@ -83,8 +89,7 @@ module Make_PPrint = functor (TPrint : Type_Print_CD) -> struct
                 | _ -> "%s 〈%s, %s 〉") in
             Printf.sprintf s_format (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
 
-    let print_e = 
-        fun e -> print_string (pprint_e e)
+    let print_e = function e -> print_string (pprint_e e)
 end
 
 module PPrint = Make_PPrint(SE_TPrint)

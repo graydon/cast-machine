@@ -1,10 +1,33 @@
 
+include Print
+include Casts
+include Primitives
+include Interpreter
+open Types
+
+open CD.Intervals.V
+
+
+(* from CD.Intervals.V *)
+let zer = CD.Types.Integer (CD.Intervals.V.zero)
+let uno = CD.Types.Integer (CD.Intervals.V.succ zero)
+
+(* SE with CDuce types *)
+let examples = 
+    [ `Var (fresh_var ());
+      `Var (fresh_var ());
+      `Cst zer;
+      `Cst uno
+    ]
+
+let show_examples () =
+    print_string "Cast expressions with CDuce types:\n";
+    List.iter (fun e -> print_e e; print_endline "") examples
+
+
+
+(* 
 open Old_print
-(* open Types *)
-(* open Casts.SE_CDuce *)
-(* open Print *)
-
-
 
 let tt = `Cst (`B true)
 let ff = `Cst (`B false) 
@@ -58,16 +81,4 @@ let _ =
         ] in
     print_string "\nOther cast expressions:\n";
     List.iter (fun e -> print_e e; print_endline "") examples
-
-open Print
-open Casts
-
-(* SE with CDuce types *)
-let _ = 
-    let examples = 
-        [ `Var (fresh_var ());
-          `Var (fresh_var ())] in
-    print_string "\nCast expressions with CDuce types:\n";
-    List.iter (fun e -> print_e e; print_endline "") examples
-
-
+ *)
