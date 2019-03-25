@@ -1,4 +1,4 @@
-Installed on `ocaml 4.07.0`, with `dune`.
+Installed on `ocaml 4.07.0`, with at least `dune` and `utop` as dependencies.
 Had a few strange bugs, among them:
 ```
     Error: File unavailable: ~/.opam/4.07.0/lib/cduce/+camlp4/camlp4lib.cma

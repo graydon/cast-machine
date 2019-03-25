@@ -69,10 +69,9 @@ let running_examples =
         App (f1, cast0)
         ]
 
-
 let eval_examples () = List.map wrap_eval running_examples
 
-
+let _ = eval_examples ()
 
 (* 
 open Old_print

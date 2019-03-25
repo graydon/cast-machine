@@ -1,14 +1,14 @@
 # Frontend to dune.
 
 .PHONY: default build install uninstall test clean
+FLAGS=--profile release
 
 default: build
 
 build:
-	dune build
-
-test:
-	dune runtest -f
+	dune build myutop.exe $(FLAGS)
+run:
+	dune exec ./myutop.exe $(FLAGS)
 
 install:
 	dune install
@@ -20,6 +20,6 @@ clean:
 	dune clean
 
 top:
-	dune utop --profile release
+	dune utop $(FLAGS) 
 # Optionally, remove all files/folders ignored by git as defined
 # in .gitignore (-X)
