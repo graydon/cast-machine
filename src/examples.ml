@@ -1,30 +1,76 @@
-
-include Print
-include Casts
-include Primitives
+(* open Types *)
+open Syntax
+open Primitives
+open Syntax.SE_CDuce
+open Print
 include Interpreter
-open Types
-open CD.Intervals.V
-
 module CD = Cduce_lib
+
+open CD.Intervals.V
+open Eager_Calculus
+
 
 (* let is_dynamic t = CD.Types.Atom.has_atom t dyn_atom *)
 (* from CD.Intervals.V *)
 let zer = CD.Types.Integer (CD.Intervals.V.zero)
-let uno = CD.Types.Integer (CD.Intervals.V.succ zero)
+let uno = CD.Types.Integer (succ zero)
+let deux = CD.Types.Integer (succ @@ succ zero)
+let un_et_deux = CD.Types.Pair (uno, deux)
+
+let vfresh = Var (fresh_var ())
+let f1 = Lam (qmark (), qmark (), mk_var "x", Cst zer)
+let cast1 = Cast (f1, qmark ())
 
 (* SE with CDuce types *)
 let examples = 
-    [ `Var (fresh_var ());
-      `Var (fresh_var ());
-      `Cst zer;
-      `Cst uno;
-      `Lam (var (fresh_dyn_var ()), var (fresh_dyn_var ()), fresh_var (), `Cst zer)
+    [ Var (mk_var "x");
+      Cst zer;
+      Cst uno;
+      f1;
+      Lam (qmark (), qmark (), mk_var "y", f1);
+      cast1;
+      Cst un_et_deux;
+    ]
+
+let c1 = constant uno
+let c0 = constant zer
+let un_ou_deux = cup c0 c1
+
+let example_types =
+    [
+        qmark ();
+        qfun ();
+        constant un_et_deux;
+        c1;
+        un_ou_deux
     ]
 
 let show_examples () =
     print_string "Cast expressions with CDuce types:\n";
     List.iter (fun e -> print_e e; print_endline "") examples
+
+let show_example_types () =
+    print_string "Dynamic types using CDuce types:\n";
+    List.iter (fun t -> print_t t; print_endline "") example_types
+
+let i0 = Cst zer
+let i1 = Cst uno
+let cast0 = TwoCast (i0, qmark (), qmark ())
+
+let running_examples = 
+        [
+        i0;
+        i1;
+        f1;
+        Lam (qmark (), qmark (), mk_var "y", f1);
+        Cst un_et_deux;
+        App (f1, i0);
+        cast0;
+        App (f1, cast0)
+        ]
+
+
+let eval_examples () = List.map wrap_eval running_examples
 
 
 

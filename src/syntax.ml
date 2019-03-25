@@ -1,25 +1,80 @@
 (** Writing a functor for type/epxressions **)
+include Types
+open Primitives
 
 module type Dynamic_Type = sig
-    (* type x  *)
-    (* variable *)
-    type var
-    type b
-    (* type alpha  *)
-    (* type variable *)
-    type t (* static type *)
-    type tau (* dynamic type *)
-
-    (* val ceil : tau -> t
-    val floor : tau -> t *)
-    (* val subtype : t -> t -> bool *)
-    
-    type subst
+    type var = Types.var
+    type b = Types.b
+    type t = Types.t (* static type *)
+    type tau = Types.t (* dynamic type *)
+    type subst = Types.subst
     val subst : t -> (var * t) list -> t
-
-    (* val proj : t -> tau *)
     val ceil : tau -> t
     val floor : tau -> t
+end
+
+module CDuce_Dynamic_Types : Dynamic_Type = struct
+    type t = Types.t
+    type var = Types.var
+    type varset = Types.varset
+    type subst = Types.subst
+    type b = Types.b (* surely false *)
+    (* type subst = CD.Types.Subst.t *)
+    (* Idée: à la manière des schemes de Tommaso, 
+    implémenter les types graduels comme des types
+    t possédant des variables de types assignées à `Dyn 
+    Je choisis cette version par rapport à celle utilisant 
+    des atomes `Dyn, parce que CDuce permet de récupérer
+    la variance des variables de type facilement, et aussi
+    les variables de type permettent de les représenter de 
+    manière distincte (avec des [fresh_var ()]) *)
+    type tau = t
+
+    let subst = CD.Types.Subst.full_list
+    let subst_single = CD.Types.Subst.single
+    let variance = CD.Types.Variable.variance
+    let pp_type = CD.Types.Print.pp_type
+    let apply = CD.Types.Arrow.apply (* [apply t1 t2 computes [t1 \circ t2] *)
+    let get = CD.Types.Arrow.get
+    let is_arrow t = subtype t CD.Types.Arrow.any
+
+    let ceil t =
+      let _, pos, neg, _ = collect_vars t in
+      (* check if the first letter of the ident 
+      is 'd', because then it is a dynamic typevar *)
+      let t' = 
+      subst t 
+        (List.map 
+          (fun v -> (v, any))
+          (CD.Var.Set.get 
+            (CD.Var.Set.filter (fun v ->
+              (CD.Var.ident v).[0] = 'd') pos)))
+      in
+      subst t'
+        (List.map 
+          (fun v -> (v, empty))
+          (CD.Var.Set.get 
+            (CD.Var.Set.filter (fun v ->
+              (CD.Var.ident v).[0] = 'd') neg)))
+          
+    let floor t =
+      let _, pos, neg, _ = collect_vars t in
+      (* check if the first letter of the ident 
+      is 'd', because then it is a dynamic typevar *)
+      let t' = 
+      subst t 
+        (List.map 
+          (fun v -> (v, any))
+          (CD.Var.Set.get 
+            (CD.Var.Set.filter (fun v ->
+              (CD.Var.ident v).[0] = 'd') neg)))
+      in
+      subst t'
+        (List.map 
+          (fun v -> (v, empty))
+          (CD.Var.Set.get 
+            (CD.Var.Set.filter (fun v ->
+              (CD.Var.ident v).[0] = 'd') pos)))
 end
 
 module type Cast_Expr = sig
@@ -27,7 +82,13 @@ module type Cast_Expr = sig
     type p (* blame labels *)
     type alpha_vector
     type t_vector
-    type e (* cast expressions *)
+    type e = 
+      | Var of var
+      | Cst of b
+      | Lam of tau * tau * var * e
+      | App of e * e
+      | Cast of e * tau
+      | TwoCast of e * tau * tau 
     (* type v *)
 end
 
@@ -102,12 +163,12 @@ module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
           | `Neg of int * int ]
 (* hi *)
     type e = 
-      [ | `Var of var
-        | `Cst of b
-        | `Lam of tau * tau * var * e
-        | `App of e * e
-        | `Cast of e * tau
-        | `TwoCast of e * tau * tau ]
+      | Var of var
+      | Cst of b
+      | Lam of tau * tau * var * e
+      | App of e * e
+      | Cast of e * tau
+      | TwoCast of e * tau * tau 
         (* for now no product, let and type abstraction *)
         (* | `Prd of e * e *)
         (* | `Pi1 of e *)
@@ -123,6 +184,11 @@ module Make_Cast_Language (Init_Type : Dynamic_Type) : (Make_Cast_Expr -> Cast_L
         include MCE(Init_Type)
         let is_value = fun _ -> true
 end
+
+module SE_CDuce = Make_Cast_Language(CDuce_Dynamic_Types)(Make_SE)
+
+
+
 
 (* module POPL19_Types = struct
     type var = string

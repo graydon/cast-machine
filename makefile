@@ -18,5 +18,8 @@ uninstall:
 
 clean:
 	dune clean
+
+top:
+	dune utop --profile release
 # Optionally, remove all files/folders ignored by git as defined
 # in .gitignore (-X)

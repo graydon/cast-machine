@@ -1,3 +1,13 @@
 _build
 codealike.json
 .merlin
+engine.ml
+lexer.mll
+parser.mly
+dune-project
+brouillon.md
+symbolic.ml
+syntax.txt
+tom_main.ml
+utils.ml
+vec.ml
