@@ -10,8 +10,14 @@ Main dependencies:
 - `dune` - working with version 1.8.2
 - `cduce` version 1.0 - installed using the `setvariants` branch of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce) (for me, `make install` puts cduce_lib inside `~/.opam/4.07.0/cduce/` which is then picked up by `dune`)
 
-After that, use the makefile (which is an interface to `dune`) in order 
-to build (`make`) and test the cast calculus in utop (`make top`).
+To build, use the makefile (which is an interface to `dune`):
+```
+    make
+```
+And to run it
+```
+    make top
+```
 
 Had a few strange bugs, among them:
 ```
