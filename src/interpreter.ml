@@ -7,13 +7,13 @@ open Print
 (* Working interpreter - this is the more eager version
 of the space-efficient semantics *)
 module Eager_Calculus = struct
-
+    include SE_CDuce
+    
     module Env = Map.Make(struct 
             type t = var
             let compare = Pervasives.compare end)
-    type twosome =
-        | I of tau * tau
-        | T of tau * tau
+    type betared = S | T (* simple or typed *)
+    type twosome = tau * tau * betared
     type v = 
         [ | `Cst of b 
         | `Closure of (tau * tau * var * e) * twosome * env
@@ -22,42 +22,43 @@ module Eager_Calculus = struct
     and env = v Env.t
 
     let inter ts (t1,t2) = match ts with
-        | T (t1', t2') | I (t1', t2') -> T (cap t1 t1', cap t2 t2')
+        | (t1', t2', _)  -> (cap t1 t1', cap t2 t2', T)
         
     let typeof : v -> t = function
         | `Cst b -> constant b
-        | `Closure (_, (I (t1', t2') | T (t1', t2')), _) -> 
+        | `Closure (_, (t1', t2', _), _) -> 
             arrow (cons t1') (cons t2')
         | `Fail -> failwith "error: type of `Fail"
 
-    let eval (e : SE_CDuce.e) = 
+    let eval : e -> v = fun e ->
         let rec aux env = function
-            | Var x -> Env.find x env
-            | Cst b -> `Cst b
-            | Lam (tau1, tau2, x, e) -> `Closure ((tau1, tau2, x, e), I (tau1, tau2), Env.empty)
-            | TwoCast (e, tau1, tau2) -> 
-                begin match (aux env e) with
-                | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
-                | `Closure (e', tau, env') ->
-                    `Closure (e', inter tau (tau1, tau2), env') 
-                | `Fail -> `Fail end
-            | App (e1, e2) ->
-                begin match (aux env e1) with
-                | `Cst _ -> failwith "error: trying to apply a constant"
-                | `Fail -> `Fail
-                | `Closure (((_, _, x, e') , (I (tau1, tau2) | T (tau1, tau2)), env')) -> 
-                    let v' = aux env e2 in
-                    let v0 = aux env (TwoCast (e2, tau2, dom tau2)) in
-                    let env'' = Env.add x v0 env' in
-                    begin match (aux env'' e') with
-                    | `Cst c -> if subtype (constant c) (ceil (apply tau1 (typeof v'))) then `Cst c else `Fail
-                    | `Closure (fe'', tau', env'') ->
-                        let tapp = apply tau1 (typeof v') in
-                        `Closure (fe'', inter tau' (tapp, dom tapp), env'')
-                    | `Fail -> `Fail (* trying to apply `Fail as a function *)
-                    end
+        | Var x -> Env.find x env
+        | Cst b -> `Cst b
+        | Lam (tau1, tau2, x, e) -> 
+            `Closure ((tau1, tau2, x, e), (tau1, tau2, T), Env.empty)
+        | TwoCast (e, tau1, tau2) -> 
+            begin match (aux env e) with
+            | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
+            | `Closure (e', tau, env') ->
+                `Closure (e', inter tau (tau1, tau2), env') 
+            | `Fail -> `Fail end
+        | App (e1, e2) ->
+            begin match (aux env e1) with
+            | `Cst _ -> failwith "error: trying to apply a constant"
+            | `Fail -> `Fail
+            | `Closure (((_, _, x, e') , (tau1, tau2, _), env')) -> 
+                let v' = aux env e2 in
+                let v0 = aux env (TwoCast (e2, tau2, dom tau2)) in
+                let env'' = Env.add x v0 env' in
+                begin match (aux env'' e') with
+                | `Cst c -> if subtype (constant c) (ceil (apply tau1 (typeof v'))) then `Cst c else `Fail
+                | `Closure (fe'', tau', env'') ->
+                    let tapp = apply tau1 (typeof v') in
+                    `Closure (fe'', inter tau' (tapp, dom tapp), env'')
+                | `Fail -> `Fail (* trying to apply `Fail as a function *)
                 end
-            | Cast (e', tau) -> `Fail
+            end
+        | Cast (e', tau) -> `Fail
         in aux Env.empty e 
         
     let wrap_eval e = 
@@ -80,8 +81,8 @@ module Lazy_Calculus = struct
         )
 
     type sigma =
-        | Id of sigma 
-        | C of t
+        | Id of tau 
+        | Cast of tau
         | Comp of sigma * sigma
         | App of t * sigma
         | Dom of sigma
@@ -89,8 +90,8 @@ module Lazy_Calculus = struct
     type funcast = t * t
 
     let rec eval_sigma : sigma -> funcast = function
-        | C t -> (t, dom t)
-        | Id s -> eval_sigma s
+        | Cast t -> (t, dom t)
+        | Id t -> (t, dom t)
         | Comp (s1, s2) -> 
             let (t1, t2), (t1', t2') = eval_sigma s1, eval_sigma s2 in
             (cap t1 t1', cap t2 t2')

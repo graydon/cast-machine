@@ -87,7 +87,7 @@ module type Cast_Expr = sig
       | Cst of b
       | Lam of tau * tau * var * e
       | App of e * e
-      | Cast of e * tau
+      | Cast of e * [ `Cast of tau ]
       | TwoCast of e * tau * tau 
     (* type v *)
 end
@@ -128,7 +128,7 @@ module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
       | Cst of b
       | Lam of tau * tau * var * e
       | App of e * e
-      | Cast of e * tau
+      | Cast of e * [ `Cast of tau ]
       | TwoCast of e * tau * tau 
         (* for now no product, let and type abstraction *)
         (* | `Prd of e * e *)

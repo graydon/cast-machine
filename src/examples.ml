@@ -17,7 +17,7 @@ let un_et_deux = CD.Types.Pair (uno, deux)
 
 let v1 = Var (fresh_var ())
 let f1 = Lam (qmark (), qmark (), mk_var "x", Cst zer)
-let cast1 = Cast (f1, qmark ())
+let cast1 = Cast (f1, `Cast (qmark ()))
 
 (* SE with CDuce types *)
 let examples = 
