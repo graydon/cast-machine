@@ -82,39 +82,20 @@ module type Cast_Expr = sig
     type p (* blame labels *)
     type alpha_vector
     type t_vector
+    type castkind
     type e = 
       | Var of var
       | Cst of b
       | Lam of tau * tau * var * e
       | App of e * e
-      | Cast of e * [ `Cast of tau ]
-      | TwoCast of e * tau * tau 
+      | Cast of e * castkind
+      (* | TwoCast of e * tau * tau  *)
     (* type v *)
 end
 
-module type Cast_Language = sig
-    include Cast_Expr
-    
-    (** DONE : find a way to define the signature of pprint_e and print_e
-        that is compatible with the open variant used to define the function
-        Here I found a way by adding a single constructor, but I would have like
-        to use an "empty open variant" [< ] of which every open variant would be
-        a supertype, and therefore by contravariance every function
-        [variant -> string] would be a subtype of this type.
-        On the other hand, now it becomes impossible to use pprint_e in practice,
-        because if I use for example on a list 
-            [ `Var "x", `Cst (`I 2) ] 
-        which has type
-            [> `Var of string | `Cst of b ]
-        then this type is not a subtype of [< `Var of string ] *)
-      (** Conclusion: switched from variants to constructors, and 
-      defined print_e elsewhere after importing this module. *)
-end
-
-module type Make_Cast_Expr = Dynamic_Type -> Cast_Expr
-
-
-module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
+module Make_SE (Init_Type : Dynamic_Type) : (Cast_Expr 
+  with type castkind := Init_Type.tau * Init_Type.tau) = 
+struct
     include Init_Type
     type alpha_vector = Init_Type.var list
     type t_vector = Init_Type.t list
@@ -123,13 +104,14 @@ module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
           | `Pos of int * int
           | `Neg of int * int ]
 (* hi *)
+    type castkind = tau * tau
     type e = 
       | Var of var
       | Cst of b
       | Lam of tau * tau * var * e
       | App of e * e
-      | Cast of e * [ `Cast of tau ]
-      | TwoCast of e * tau * tau 
+      | Cast of e * castkind
+      (* | TwoCast of e * tau * tau  *)
         (* for now no product, let and type abstraction *)
         (* | `Prd of e * e *)
         (* | `Pi1 of e *)
@@ -139,13 +121,7 @@ module Make_SE (Init_Type : Dynamic_Type) : Cast_Expr = struct
         (* | `TApp of e * t_vector *)
 end
 
-module Make_Cast_Language (Init_Type : Dynamic_Type) : (Make_Cast_Expr -> Cast_Language) = 
-    functor (MCE : Make_Cast_Expr) -> 
-    struct
-        include MCE(Init_Type)
-end
-
-module SE_CDuce = Make_Cast_Language(CDuce_Dynamic_Types)(Make_SE)
+module SE_CDuce = Make_SE(CDuce_Dynamic_Types)
 
 (* A naive implem of Victor's types and expressions from "Space-efficient [...]" notes *)
 
@@ -221,3 +197,25 @@ end *)
 
 (* module POPL19 = (Make_Cast_Language(POPL19_Types))(Make_POPL19)
 module SE = (Make_Cast_Language(SE_Types))(Make_SE) *)
+
+
+(* module type Cast_Language = sig
+    include Cast_Expr
+    
+    (** DONE : find a way to define the signature of pprint_e and print_e
+        that is compatible with the open variant used to define the function
+        Here I found a way by adding a single constructor, but I would have like
+        to use an "empty open variant" [< ] of which every open variant would be
+        a supertype, and therefore by contravariance every function
+        [variant -> string] would be a subtype of this type.
+        On the other hand, now it becomes impossible to use pprint_e in practice,
+        because if I use for example on a list 
+            [ `Var "x", `Cst (`I 2) ] 
+        which has type
+            [> `Var of string | `Cst of b ]
+        then this type is not a subtype of [< `Var of string ] *)
+      (** Conclusion: switched from variants to constructors, and 
+      defined print_e elsewhere after importing this module. *)
+end
+
+module type Make_Cast_Expr = (Dynamic_Type -> Cast_Expr) *)

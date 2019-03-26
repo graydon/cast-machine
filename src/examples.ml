@@ -14,10 +14,11 @@ let zer = CD.Types.Integer (zero)
 let uno = CD.Types.Integer (succ zero)
 let deux = CD.Types.Integer (succ @@ succ zero)
 let un_et_deux = CD.Types.Pair (uno, deux)
+let dummy = var (mk_var "")
 
 let v1 = Var (fresh_var ())
 let f1 = Lam (qmark (), qmark (), mk_var "x", Cst zer)
-let cast1 = Cast (f1, `Cast (qmark ()))
+let cast1 = Cast (f1, (qmark (), dummy))
 
 (* SE with CDuce types *)
 let examples = 
@@ -52,7 +53,7 @@ let show_example_types () =
 
 let i0 = Cst zer
 let i1 = Cst uno
-let cast0 = TwoCast (i0, qmark (), qmark ())
+let cast0 = Cast (i0, (qmark (), qmark ()))
 
 let running_examples = [
         i0;

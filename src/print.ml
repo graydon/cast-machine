@@ -42,8 +42,6 @@ end
 (** Useless functor; but gives the beginning of current Print modules *)
 module Make_Print = functor (Print : Type_Print_CD) -> struct
     include Print
-    include SE_CDuce
-
     let pprint_p = function 
         | `Simple n -> string_of_int n
         | `Neg (n, m) | `Pos (n, m) -> Printf.sprintf "(%s, %s)" (string_of_int n) (string_of_int m)
@@ -66,13 +64,11 @@ module Make_Print = functor (Print : Type_Print_CD) -> struct
             Printf.sprintf "(λ %s . %s) : %s 🡒  %s" (pprint_var var) (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
         | App (e1, e2) -> 
             Printf.sprintf "(%s) %s" (pprint_e e1) (pprint_e e2)
-        | Cast (e, `Cast tau) ->
-            Printf.sprintf "(%s) 〈%s〉" (pprint_e e) (pprint_tau tau)
-        | TwoCast (e, tau1, tau2) ->    
+        | Cast (e, (tau1, tau2)) ->
             let s_format : _ format = 
                 (match e with
                 | Lam _ -> "(%s) 〈%s, %s 〉" (* careful: influences the variant type *)
-                | TwoCast _ -> "%s〈%s, %s 〉" (* careful: influences the variant type *)
+                | Cast _ -> "%s〈%s, %s 〉" (* careful: influences the variant type *)
                 | _ -> "%s 〈%s, %s 〉") in
             Printf.sprintf s_format (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
         (* | `Prd (e1, e2) ->

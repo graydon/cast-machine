@@ -8,7 +8,7 @@ open Print
 of the space-efficient semantics *)
 module Eager_Calculus = struct
     include SE_CDuce
-    
+
     module Env = Map.Make(struct 
             type t = var
             let compare = Pervasives.compare end)
@@ -36,7 +36,7 @@ module Eager_Calculus = struct
         | Cst b -> `Cst b
         | Lam (tau1, tau2, x, e) -> 
             `Closure ((tau1, tau2, x, e), (tau1, tau2, T), Env.empty)
-        | TwoCast (e, tau1, tau2) -> 
+        | Cast (e, (tau1, tau2)) -> 
             begin match (aux env e) with
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
             | `Closure (e', tau, env') ->
@@ -48,7 +48,7 @@ module Eager_Calculus = struct
             | `Fail -> `Fail
             | `Closure (((_, _, x, e') , (tau1, tau2, _), env')) -> 
                 let v' = aux env e2 in
-                let v0 = aux env (TwoCast (e2, tau2, dom tau2)) in
+                let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
                 let env'' = Env.add x v0 env' in
                 begin match (aux env'' e') with
                 | `Cst c -> if subtype (constant c) (ceil (apply tau1 (typeof v'))) then `Cst c else `Fail
@@ -58,7 +58,6 @@ module Eager_Calculus = struct
                 | `Fail -> `Fail (* trying to apply `Fail as a function *)
                 end
             end
-        | Cast (e', tau) -> `Fail
         in aux Env.empty e 
         
     let wrap_eval e = 
