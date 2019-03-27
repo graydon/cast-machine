@@ -5,6 +5,7 @@ type var = CD.Var.t
 type varset = CD.Var.Set.t
 type subst = CD.Types.Subst.t
 type b = CD.Types.const
+type tau = CD.Types.t
 
 let fresh_var () =
   let n = Oo.id (object end) in

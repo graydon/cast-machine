@@ -89,6 +89,7 @@ module type Cast_Expr = sig
       | Lam of tau * tau * var * e
       | App of e * e
       | Cast of e * castkind
+      | Succ of e | Pred of e
       (* | TwoCast of e * tau * tau  *)
     (* type v *)
 end
@@ -111,6 +112,7 @@ struct
       | Lam of tau * tau * var * e
       | App of e * e
       | Cast of e * castkind
+      | Succ of e | Pred of e
       (* | TwoCast of e * tau * tau  *)
         (* for now no product, let and type abstraction *)
         (* | `Prd of e * e *)
@@ -122,6 +124,32 @@ struct
 end
 
 module SE_CDuce = Make_SE(CDuce_Dynamic_Types)
+
+module SE_CDuce_Symbolic =
+struct
+    include CDuce_Dynamic_Types
+    type alpha_vector = var list
+    type t_vector = t list
+    type p =    (* blame label *)
+        [ | `Simple of int
+          | `Pos of int * int
+          | `Neg of int * int ]
+(* hi *)
+    type sigma = Id of tau
+           | Cast of tau
+           | Comp of sigma * sigma
+           | App of tau * sigma
+           | Dom of sigma
+    type castkind = sigma
+    type e = 
+      | Var of var
+      | Cst of b
+      | Lam of tau * tau * var * e
+      | App of e * e
+      | Cast of e * castkind
+      | Succ of e | Pred of e
+    let comp s1 s2 = Comp (s1, s2)
+end
 
 (* A naive implem of Victor's types and expressions from "Space-efficient [...]" notes *)
 
