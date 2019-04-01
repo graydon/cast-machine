@@ -20,6 +20,13 @@ let mk_var s = CD.Var.mk ~internal:false s
 let mk_arrow t1 t2 = arrow (cons t1) (cons t2)
 let collect_vars = CD.Types.collect_vars
 let pp_const = CD.Types.Print.pp_const
+let succ = CD.Intervals.V.succ
+let pred = CD.Intervals.V.pred
+
+(* transform a string into a cduce type *)
+let parse_t str = 
+    str |> Stream.of_string |> CD.Parser.pat 
+        |> CD.Typer.typ CD.Typer.empty_env |> CD.Types.descr
 
 let qmark () = var (fresh_dyn_var ())
 let qm () = cons (qmark ())
