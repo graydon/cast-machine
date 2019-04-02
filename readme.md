@@ -9,6 +9,7 @@ Main dependencies:
 - `utop` - installed through `opam`
 - `dune` - working with version 1.8.2
 - `cduce` version 1.0 - installed using the `setvariants` branch of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce) (for me, `make install` puts cduce_lib inside `~/.opam/4.07.0/cduce/` which is then picked up by `dune`)
+- `menhir`
 
 To build, use the makefile (which is an interface to `dune`):
 ```
@@ -16,8 +17,9 @@ To build, use the makefile (which is an interface to `dune`):
 ```
 And to run it
 ```
-    make top
+    make run
 ```
+
 
 ## Issues
 
@@ -30,12 +32,4 @@ the actual file from `camlp4`:
 ```
     mkdir ~/.opam/4.07.0/lib/cduce/+camlp4/ &&
     ln -s ~/.opam/4.07.0/lib/ocaml/camlp4/camlp4lib.cma ~/.opam/4.07.0/lib/cduce/+camlp4/
-```
-
-## Usage
-
-`make top` imports the libraries in Utop and starts an instance of it. To try and see some examples:
-```
-  open Examples;;
-  eval_examples ();;
 ```
