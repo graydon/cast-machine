@@ -21,6 +21,12 @@ module Eager_Calculus = struct
         ]
     and env = v Env.t
 
+    let print_v : v -> unit = function
+        | `Fail -> print_string "Fail"
+        | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
+        | `Closure ((t1, t2, x, e), _, _) -> print_e (Lam (t1, t2, x, e))
+
+
     let inter ts (t1,t2) = match ts with
         | (t1', t2', _)  -> (cap t1 t1', cap t2 t2', T)
         
@@ -30,8 +36,20 @@ module Eager_Calculus = struct
             arrow (cons t1') (cons t2')
         | `Fail -> failwith "error: type of `Fail"
 
+    type exec_param = {debug : bool ref;
+                       depth : int ref;
+                       inline : bool ref}
+    let exec_info = {debug = ref false; depth = ref 0; inline = ref false}
+
     let eval : e -> v = fun e ->
-        let rec aux : env -> e -> v = fun env -> function
+        let rec aux : env -> e -> v = fun env e -> 
+            if !(exec_info.debug) then begin
+                print_string 
+                    (String.init !(exec_info.depth) (fun _ -> '\t'));
+                print_e e; incr exec_info.depth; 
+                if not !(exec_info.inline) then print_endline "";
+                exec_info.inline := false end;
+        match e with 
         | Var x -> begin
             try Env.find x env
             with Not_found -> 
@@ -45,7 +63,7 @@ module Eager_Calculus = struct
             | _ -> `Fail end
         | Cst b -> `Cst b
         | Lam (tau1, tau2, x, e) -> 
-            `Closure ((tau1, tau2, x, e), (tau1, tau2, T), Env.empty)
+            `Closure ((tau1, tau2, x, e), (mk_arrow tau1 tau2, tau1, T), Env.empty)
         | Cast (e, (tau1, tau2)) -> 
             begin match (aux env e) with
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
@@ -53,17 +71,29 @@ module Eager_Calculus = struct
                 `Closure (e', inter tau (tau1, tau2), env') 
             | `Fail -> `Fail end
         | App (e1, e2) ->
+            exec_info.inline := true;
             begin match (aux env e1) with
             | `Cst _ -> failwith "error: trying to apply a constant"
             | `Fail -> `Fail
             | `Closure (((_, _, x, e') , (tau1, tau2, _), env')) -> 
-                let v' = aux env e2 in
+                let v = aux env e2 in
                 let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
                 let env'' = Env.add x v0 env' in
                 begin match (aux env'' e') with
-                | `Cst c -> if subtype (constant c) (ceil (apply tau1 (typeof v'))) then `Cst c else `Fail
+                | `Cst c -> 
+                    if !(exec_info.debug) then
+                    begin (* debug *)
+                        print_endline @@ pprint_cst c;
+                        print_t tau1; print_endline "";
+                        print_t (typeof v); print_endline "";
+                        print_v v; print_endline "";
+                        print_t (apply tau1 (typeof v)); print_endline ""
+                    end;
+                    if subtype (constant c) (ceil (apply tau1 (typeof v))) 
+                    then `Cst c else 
+                    begin print_endline "cst subtype failed"; `Fail end
                 | `Closure (fe'', tau', _) ->
-                    let tapp = apply tau1 (typeof v') in
+                    let tapp = apply tau1 (typeof v) in
                     `Closure (fe'', inter tau' (tapp, dom tapp), env'')
                 | `Fail -> `Fail (* trying to apply `Fail as a function *)
                 end
@@ -74,10 +104,7 @@ module Eager_Calculus = struct
     (* try  *)
         (* Printf.printf "prog: %s\n" (pprint_e e); *)
         print_string  "- ";
-        begin match eval e with
-        | `Fail -> print_string "Fail"
-        | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
-        | `Closure ((t1, t2, x, e), _, _) -> print_e (Lam (t1, t2, x, e)) end; 
+        print_v (eval e);
         print_endline ""
     (* with Stack_overflow ->
         print_endline "error: OCaml stack overflow\n" *)
