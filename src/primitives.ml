@@ -24,17 +24,23 @@ let pp_const = CD.Types.Print.pp_const
 let succ = CD.Intervals.V.succ
 let pred = CD.Intervals.V.pred
 
+exception Expression_Syntax_Error
+exception Type_Syntax_Error
 
 (* transform a string into a cduce type *)
 let parse_t str = 
+    try 
     str |> Stream.of_string |> CD.Parser.pat 
         |> CD.Typer.typ CD.Typer.empty_env |> CD.Types.descr
+    with _ -> raise Type_Syntax_Error
 
 let parse_cst str = 
+        try
         str |> Stream.of_string |> CD.Parser.expr
             |> CD.Typer.type_expr CD.Typer.empty_env |> fst
             |> CD.Compile.compile_eval_expr CD.Compile.empty_toplevel
             |> CD.Value.inv_const
+        with _ -> raise Expression_Syntax_Error
 
 let qmark () = var (fresh_dyn_var ())
 let qm () = cons (qmark ())

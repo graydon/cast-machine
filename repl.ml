@@ -4,6 +4,7 @@ open Print.Print
 open Interpreter.Eager_Calculus
 open Compile.Compile1
 open Exec.Exec1
+open Primitives
 
 type parameters_structure =
   {debug : bool ref;
@@ -24,11 +25,18 @@ let eval_with_parameters params e =
       wrap_run btc
 
 let rec repl () = 
+  try
     print_string @@ !(params.machine) ^ "# ";
     let lb = Lexing.from_string (read_line ()) in
     let e = Parser.prog Lexer.token lb in
     (* print_string "prog: "; Print.Print.print_e e; print_endline ""; *)
     eval_with_parameters params e;
+    repl ()
+  with Expression_Syntax_Error ->
+    print_endline "error: expression syntax";
+    repl ()
+       | Type_Syntax_Error ->
+    print_endline "error: type syntax";
     repl ()
 
 let _ = repl ()
