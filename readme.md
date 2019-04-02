@@ -9,6 +9,7 @@ Main dependencies:
 - `utop` - installed through `opam`
 - `dune` - working with version 1.8.2
 - `cduce` version 1.0 - installed using the `setvariants` branch of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce) (for me, `make install` puts cduce_lib inside `~/.opam/4.07.0/cduce/` which is then picked up by `dune`)
+- `menhir`
 
 To build, use the makefile (which is an interface to `dune`):
 ```
