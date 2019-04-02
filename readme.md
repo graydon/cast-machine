@@ -2,7 +2,7 @@
 
 ## Build
 
-Installed on `ocaml 4.07.0`.
+Working on `ocaml 4.07.0`.
 
 Main dependencies: 
 - **opam**
