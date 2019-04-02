@@ -12,5 +12,5 @@
 
 (library
     (name cast)
-    (libraries threads cduce)
+    (libraries threads cduce str)
     (modules parser syntax types primitives lexer print interpreter compile exec))

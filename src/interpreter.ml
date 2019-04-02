@@ -16,7 +16,7 @@ module Eager_Calculus = struct
     type twosome = tau * tau * betared
     type v = 
         [ | `Cst of b 
-        | `Closure of (tau * tau * var * e) * twosome * env
+        | `Closure of (tau * var * e) * twosome * env
         | `Fail
         ]
     and env = v Env.t
@@ -24,7 +24,7 @@ module Eager_Calculus = struct
     let print_v : v -> unit = function
         | `Fail -> print_string "Fail"
         | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
-        | `Closure ((t1, t2, x, e), _, _) -> print_e (Lam (t1, t2, x, e))
+        | `Closure ((t, x, e), _, _) -> print_e (Lam (t, x, e))
 
 
     let inter ts (t1,t2) = match ts with
@@ -62,8 +62,8 @@ module Eager_Calculus = struct
             | `Cst (Integer i) -> `Cst (Integer (CD.Intervals.V.pred i))
             | _ -> `Fail end
         | Cst b -> `Cst b
-        | Lam (tau1, tau2, x, e) -> 
-            `Closure ((tau1, tau2, x, e), (mk_arrow tau1 tau2, tau1, T), Env.empty)
+        | Lam (tau, x, e) -> 
+            `Closure ((tau, x, e), (tau, dom tau, T), Env.empty)
         | Cast (e, (tau1, tau2)) -> 
             begin match (aux env e) with
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
@@ -75,7 +75,7 @@ module Eager_Calculus = struct
             begin match (aux env e1) with
             | `Cst _ -> failwith "error: trying to apply a constant"
             | `Fail -> `Fail
-            | `Closure (((_, _, x, e') , (tau1, tau2, _), env')) -> 
+            | `Closure (((_, x, e') , (tau1, tau2, _), env')) -> 
                 let v = aux env e2 in
                 let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
                 let env'' = Env.add x v0 env' in
@@ -138,7 +138,7 @@ module Symbolic_Calculus = struct
 
     type v = 
         [ | `Cst of b 
-        | `Closure of (tau * tau * var * e) * sigma * env
+        | `Closure of (tau * var * e) * sigma * env
         | `Fail
         ]
     and venv = [ `Cast of v * sigma ]
@@ -166,8 +166,8 @@ module Symbolic_Calculus = struct
         | `Cst (Integer i) -> `Cst (Integer (CD.Intervals.V.pred i))
         | _ -> `Fail end
     | Cst b -> `Cst b
-    | Lam (tau1, tau2, x, e) -> 
-        `Closure ((tau1, tau2, x, e), Id (mk_arrow tau1 tau2), Env.empty)
+    | Lam (tau, x, e) -> 
+        `Closure ((tau, x, e), Id tau, Env.empty)
     | Cast (e, sigma1) -> 
         begin match (eval_aux env e) with
         | `Cst c -> if subtype (constant c) (ceil (eval1 sigma1)) then `Cst c else `Fail
@@ -178,7 +178,7 @@ module Symbolic_Calculus = struct
         begin match (eval_aux env e1) with
         | `Cst _ -> failwith "error: trying to apply a constant"
         | `Fail -> `Fail
-        | `Closure (((_, _, x, e') , sigma1, env')) -> 
+        | `Closure (((_, x, e') , sigma1, env')) -> 
             let v' = eval_aux env e2 in
             (* here is the distinction lazy/eager for this symbolic calc *)
             (* let v0 = eval_aux env (Cast (e2, Dom sigma1)) in *)
@@ -201,7 +201,7 @@ module Symbolic_Calculus = struct
         begin match eval e with
         | `Fail -> print_string "Fail"
         | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
-        | `Closure ((t1, t2, x, e), _, _) -> print_e (Lam (t1, t2, x, e)) end; 
+        | `Closure ((t, x, e), _, _) -> print_e (Lam (t, x, e)) end; 
         print_endline "\n"
 end 
 

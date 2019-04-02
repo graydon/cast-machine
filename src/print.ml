@@ -60,8 +60,8 @@ module Print = struct
     let rec (pprint_e : e -> string) = function
         | Var var -> pprint_var var
         | Cst b -> pprint_cst b
-        | Lam (tau1, tau2, var, e) -> 
-            Printf.sprintf "λ [%s] %s . %s" (pprint_tau (mk_arrow tau1 tau2)) (pprint_var var) (pprint_e e) 
+        | Lam (tau, var, e) -> 
+            Printf.sprintf "λ [%s] %s . %s" (pprint_tau tau) (pprint_var var) (pprint_e e) 
         | App (e1, e2) -> 
             let s_format : _ format =
                 (match e2 with
@@ -119,8 +119,8 @@ module Print_Symbolic = struct
     let rec (pprint_e : e -> string) = function
         | Var var -> pprint_var var
         | Cst b -> pprint_cst b
-        | Lam (tau1, tau2, var, e) -> 
-            Printf.sprintf "(λ %s . %s) : %s 🡒  %s" (pprint_var var) (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
+        | Lam (tau, var, e) -> 
+            Printf.sprintf "(λ %s . %s) : %s" (pprint_var var) (pprint_e e) (pprint_tau tau) 
         | App (e1, e2) -> 
             Printf.sprintf "(%s) %s" (pprint_e e1) (pprint_e e2)
         | Cast (e, (Cast t | Id t)) ->

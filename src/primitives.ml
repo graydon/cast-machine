@@ -30,7 +30,9 @@ exception Type_Syntax_Error
 (* transform a string into a cduce type *)
 let parse_t str = 
     try 
-    str |> Stream.of_string |> CD.Parser.pat 
+    str |> Str.global_substitute (Str.regexp_string "?")
+            (fun _ -> fresh_dyn_id ()) 
+        |> Stream.of_string |> CD.Parser.pat 
         |> CD.Typer.typ CD.Typer.empty_env |> CD.Types.descr
     with _ -> raise Type_Syntax_Error
 

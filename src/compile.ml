@@ -22,7 +22,7 @@ module Compile1 = struct
         | Var x ->                [ACC x]
         | Cst c ->                [CST c]
         | App (e1, e2) ->         (compile e1) @ (compile e2) @ [APP]
-        | Lam (_, _, x, e) ->     [CLS (x, (compile e) @ [RET])]
+        | Lam (_, x, e) ->     [CLS (x, (compile e) @ [RET])]
         | Cast (e, (tau_1, _)) -> [CAS (compile e, tau_1)]
         | Succ e ->               (compile e) @ [SUC]
         | Pred e ->               (compile e) @ [PRE]

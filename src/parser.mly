@@ -53,8 +53,8 @@ expr:
 			{ App (Var v, e2) }
 	| v=var
 			{ Var v }
-	| LAMBDA BRACEOPEN t1=pat COLON t2=pat BRACECLOSE x=var DOT e=expr   
-			{ Lam (t1, t2, x, e) }
+	| LAMBDA BRACEOPEN t=pat  BRACECLOSE x=var DOT e=expr   
+			{ Lam (t, x, e) }
 	| e=expr MOD t=pat
 			{ Cast (e, (t, dom t)) }
 	| c=pat_const

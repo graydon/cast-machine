@@ -11,6 +11,10 @@ let fresh_var () =
   let n = Oo.id (object end) in
   CD.Var.mk ~internal:false (Printf.sprintf "a%04d" n)
 
+let fresh_dyn_id () =
+  let n = Oo.id (object end) in
+  Printf.sprintf "'d%04d" n
+
 let fresh_dyn_var () =
   let n = Oo.id (object end) in
   CD.Var.mk ~internal:false (Printf.sprintf "d%04d" n)
