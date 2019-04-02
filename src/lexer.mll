@@ -61,6 +61,8 @@ rule token = parse
   | blank +         { token lexbuf }
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
+	| '%'							{ MOD }
+	| '?'							{ QMARK }
 	| '0'							{ PAT "0" }
 	| ':'						  { COLON }
 	| '{'							{ BRACEOPEN }
@@ -69,8 +71,6 @@ rule token = parse
 	| "fun"						{ LAMBDA }
   | '('             { PAROPEN }
   | ')'             { PARCLOSE }
-  | '['             { BRACKOPEN }
-  | ']'             { BRACKCLOSE }
   | ident as id     { IDENT id }
 	| pat as p 				{ PAT p }
 	| eof             { EOF }

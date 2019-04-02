@@ -4,11 +4,13 @@
 
 (menhir
   (modules parser)
-  (flags ("-la" "2" "--trace" "--explain"))
+  (flags ("-la" "2"))
 )
+
+; add  "--trace" "--explain" to flags in order to debug
 
 
 (library
     (name cast)
     (libraries threads cduce)
-    (modules parser syntax types primitives lexer print))
+    (modules parser syntax types primitives lexer print interpreter))

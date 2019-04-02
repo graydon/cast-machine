@@ -2,8 +2,6 @@ _build
 codealike.json
 .merlin
 engine.ml
-lexer.mll
-parser.mly
 dune-project
 brouillon.md
 symbolic.ml

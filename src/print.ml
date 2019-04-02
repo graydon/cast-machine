@@ -61,9 +61,13 @@ module Print = struct
         | Var var -> pprint_var var
         | Cst b -> pprint_cst b
         | Lam (tau1, tau2, var, e) -> 
-            Printf.sprintf "(λ %s . %s) : %s" (pprint_var var) (pprint_e e) (pprint_tau (mk_arrow tau1 tau2))
+            Printf.sprintf "λ [%s] %s . %s" (pprint_tau (mk_arrow tau1 tau2)) (pprint_var var) (pprint_e e) 
         | App (e1, e2) -> 
-            Printf.sprintf "(%s) %s" (pprint_e e1) (pprint_e e2)
+            let s_format : _ format =
+                (match e2 with
+                | Lam _ | Cast _ -> "(%s) (%s)"
+                | _ ->     "(%s) %s") in
+            Printf.sprintf s_format (pprint_e e1) (pprint_e e2)
         | Cast (e, (tau1, tau2)) ->
             let s_format : _ format = 
                 (match e with

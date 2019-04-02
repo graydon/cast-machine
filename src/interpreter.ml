@@ -72,13 +72,13 @@ module Eager_Calculus = struct
         
     let wrap_eval e =
     (* try  *)
-        Printf.printf "code : %s\n" (pprint_e e);
-        print_string  "eval : ";
+        (* Printf.printf "prog: %s\n" (pprint_e e); *)
+        print_string  "- ";
         begin match eval e with
         | `Fail -> print_string "Fail"
         | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
         | `Closure ((t1, t2, x, e), _, _) -> print_e (Lam (t1, t2, x, e)) end; 
-        print_endline "\n"
+        print_endline ""
     (* with Stack_overflow ->
         print_endline "error: OCaml stack overflow\n" *)
 end
