@@ -20,12 +20,16 @@
 %token LET FUNCTION
 **)
 %token COLON
-%token LEFTANGLE RIGHTANGLE
+/* %token LEFTANGLE RIGHTANGLE */
 %token QMARK
 
 %token <string> IDENT
 %token <string> PAT
 %token EOF
+
+/* %nonassoc IDENT */
+%nonassoc PARCLOSE
+%left MOD
 
 /* Starting production. */
 
@@ -41,12 +45,12 @@ prog:
 		{ e }
 
 expr:
-	| PAROPEN e=expr PARCLOSE
-			{ e }
 	| PAROPEN e1=expr PARCLOSE e2=expr
 			{ App (e1, e2) }
+	| PAROPEN e=expr PARCLOSE
+			{ e }
 	| v=var e2=expr 
-			{ print_endline "expr2"; App (Var v, e2) }
+			{ App (Var v, e2) }
 	| v=var
 			{ Var v }
 	| LAMBDA BRACEOPEN t1=pat COLON t2=pat BRACECLOSE x=var DOT e=expr   
@@ -57,13 +61,15 @@ expr:
 			{ Cst c }
 
 pat:
-	| t=PAT   { parse_t t } 	(* todo: replace all qmarks in t with fresh grad variables to
-									have more structred grad types *)
-	| QMARK   { qmark () }
+	| t=PAT    							(* todo: replace all qmarks in t with fresh gradual *)
+			{ parse_t t }				(* variables to have more structured gradual types *)
+	| QMARK   
+			{ qmark () }
 
 var:
-	| v=IDENT { mk_var v }
+	| v=IDENT 
+			{ mk_var v }
 
 pat_const:
 	| c=PAT
-	 	{ parse_cst c }
+	 		{ parse_cst c }

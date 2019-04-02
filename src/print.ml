@@ -71,9 +71,9 @@ module Print = struct
         | Cast (e, (tau1, tau2)) ->
             let s_format : _ format = 
                 (match e with
-                | Lam _ -> "(%s) 〈%s, %s 〉" (* careful: influences the variant type *)
-                | Cast _ -> "%s〈%s, %s 〉" (* careful: influences the variant type *)
-                | _ -> "%s 〈%s, %s 〉") in
+                | Lam _ -> "(%s) 〈%s, %s〉" (* careful: influences the variant type *)
+                | Cast _ -> "%s〈%s, %s〉" (* careful: influences the variant type *)
+                | _ -> "%s 〈%s, %s〉") in
             Printf.sprintf s_format (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
         | Succ (e) ->
             Printf.sprintf "succ %s" (pprint_e e)

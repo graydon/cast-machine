@@ -5,7 +5,13 @@ FLAGS=--profile release
 
 default: build
 
+CDUCE_LIB_DIR="`ocamlfind query cduce`"
+
 build:
+	@if [ ! -d "$(CDUCE_LIB_DIR)/+camlp4" ]; then\
+		mkdir "$(CDUCE_LIB_DIR)/+camlp4";\
+		ln -s "$(CDUCE_LIB_DIR)/../ocaml/camlp4/camlp4lib.cma" "$(CDUCE_LIB_DIR)/+camlp4";\
+	fi
 	@dune build repl.exe $(FLAGS)
 
 run: build

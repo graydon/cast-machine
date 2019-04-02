@@ -10,16 +10,16 @@ type parameters_structure =
    machine: string ref}
 
 let params =
-  {debug = ref false;
+  {debug = ref true;
   machine = ref ""}
 
 let () = if Array.length (Sys.argv) > 1
-          then 
-          params.machine := "machine mode"
+         then params.machine := "machine mode"
 
 let eval_with_parameters params e =
+  let () = if !(params.debug) then print_e e; print_endline "" in
   if !(params.machine) = "" then wrap_eval e
-  else 
+  else
       let btc = compile e in
       wrap_run btc
 
