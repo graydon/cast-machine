@@ -11,6 +11,9 @@ build:
 run: build
 	@rlwrap -a ./_build/default/repl.exe
 
+machine: build
+	@rlwrap -a ./_build/default/repl.exe --machine
+
 install:
 	dune install
 

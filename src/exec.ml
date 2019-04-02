@@ -50,7 +50,23 @@ module Exec1 = struct
             | PRE :: c, e, `CST (Integer i) :: s, d ->
                 aux (c, e, `CST (Integer (pred i)) :: s, d)
 
-            | _ -> failwith "error: execution case failure"
+            | s -> s
 
         in aux (code, env, [], [])
+    
+    let run_init code =
+        run code Env.empty
+
+    let finish = function 
+        | _, _, v :: _, _ -> v
+        | _ -> failwith "no return value"
+
+    let print_value : stack_value -> unit = function
+        | `CST c -> Print.print_e (Cst c)
+        | `BTC _ | `ENV _ -> failwith "wrong type of return value on stack"
+        | `CLS (x,c'') -> Printf.printf "fun %s -> code" (Print.pprint_var x)
+
+    let wrap_run code = 
+        let v = finish (run_init code) in
+        print_string "- " ; print_value v; print_endline ""
 end
