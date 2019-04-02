@@ -17,8 +17,9 @@ To build, use the makefile (which is an interface to `dune`):
 ```
 And to run it
 ```
-    make top
+    make run
 ```
+
 
 ## Issues
 
@@ -31,12 +32,4 @@ the actual file from `camlp4`:
 ```
     mkdir ~/.opam/4.07.0/lib/cduce/+camlp4/ &&
     ln -s ~/.opam/4.07.0/lib/ocaml/camlp4/camlp4lib.cma ~/.opam/4.07.0/lib/cduce/+camlp4/
-```
-
-## Usage
-
-`make top` imports the libraries in Utop and starts an instance of it. To try and see some examples:
-```
-  open Examples;;
-  eval_examples ();;
 ```
