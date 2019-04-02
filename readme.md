@@ -20,6 +20,29 @@ And to run it
     make run
 ```
 
+## Syntax
+
+```
+e ::=
+    | c                                     % CDuce constant
+    | x                                     % Variable
+    | \ { tau : tau } x . e                 % Lambda abstractions
+    | fun { tau : tau } x . e
+    | e e                                   % Application
+    | e % tau                               % Cast
+    
+c := any writable CDuce constant (pushing this definition may break the parser in fixable ways...)
+
+x := ['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
+
+tau := t | ? (structural gradual types not yet available)
+
+t := any writable CDuce type (cf. above)
+``` 
+
+
+To be clear: &lambda;<sup>&tau;<sub>1</sub> &rarr; &tau;<sub>2</sub></sup> x . e is written as `\ { tau_1 : tau_2 } x . e`.
+
 
 ## Compilation issue
 
