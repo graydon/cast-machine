@@ -2,4 +2,12 @@
     (name myutop)
     (link_flags -linkall)
     (libraries utop cast)
-    (modes byte))
+    (modes byte)
+    (modules myutop))
+
+(executable
+    (name repl)
+    (link_flags -linkall)
+    (libraries cast)
+    (modes byte)
+    (modules repl))

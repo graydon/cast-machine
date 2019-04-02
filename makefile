@@ -6,9 +6,10 @@ FLAGS=--profile release
 default: build
 
 build:
-	dune build myutop.exe $(FLAGS)
-run:
-	dune exec ./myutop.exe $(FLAGS)
+	@dune build repl.exe $(FLAGS)
+
+run: build
+	@rlwrap -a ./_build/default/repl.exe
 
 install:
 	dune install

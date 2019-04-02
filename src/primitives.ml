@@ -1,5 +1,6 @@
 open Types
 
+let zero = CD.Intervals.V.zero
 let var = CD.Types.var
 let any = CD.Types.any
 let empty = CD.Types.empty
@@ -23,10 +24,17 @@ let pp_const = CD.Types.Print.pp_const
 let succ = CD.Intervals.V.succ
 let pred = CD.Intervals.V.pred
 
+
 (* transform a string into a cduce type *)
 let parse_t str = 
     str |> Stream.of_string |> CD.Parser.pat 
         |> CD.Typer.typ CD.Typer.empty_env |> CD.Types.descr
+
+let parse_cst str = 
+        str |> Stream.of_string |> CD.Parser.expr
+            |> CD.Typer.type_expr CD.Typer.empty_env |> fst
+            |> CD.Compile.compile_eval_expr CD.Compile.empty_toplevel
+            |> CD.Value.inv_const
 
 let qmark () = var (fresh_dyn_var ())
 let qm () = cons (qmark ())
