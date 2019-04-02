@@ -1,3 +1,14 @@
+(ocamllex
+  (modules lexer)
+)
+
+(menhir
+  (modules parser)
+  (flags ("-la" "2" "--trace" "--explain"))
+)
+
+
 (library
     (name cast)
-    (libraries threads cduce))
+    (libraries threads cduce)
+    (modules parser syntax types primitives lexer print))
