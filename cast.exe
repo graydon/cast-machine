@@ -94,3 +94,36 @@ rlwrap -a _build/default/repl.exe "$@"
 #! /bin/sh
 
 rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 
+#! /bin/sh
+
+rlwrap -a _build/default/repl.exe "$@" 

@@ -50,27 +50,54 @@ module Exec1 = struct
         (String.concat " . "
         (List.map show_stack_value s))
 
-    
+    exception Machine_Stack_Overflow
 
     type run_params =
         {run : bool ref;
-         step : int ref}
+         step : int ref;
+         max_stack : int ref;
+         verbose : int ref}
 
     let run_params =
         {run = ref true;
-         step = ref 0}
+         step = ref 0;
+         max_stack = ref 300;
+         verbose = ref 1}
+
+    let print_debug_stack run_params s =
+        let stack_size = List.length s in
+        if stack_size < 20 && !(run_params.verbose) >= 1
+        then Printf.printf "Stack[%i]: %s\n" (stack_size) (print_stack s)
+        else Printf.printf "Stack[%i]\n" (stack_size) 
+
+    let print_debug_code run_params s =
+        let stack_size = List.length s in
+        if stack_size < 20 && !(run_params.verbose) >= 1
+        then Printf.printf "Code [%i]: %s\n" (stack_size) (show_bytecode s)
+        else Printf.printf "Code [%i]\n" (stack_size) 
+
+    let print_debug_env run_params s =
+        let stack_size = List.length (List.of_seq @@ Env.to_seq s) in
+        if stack_size < 20 && !(run_params.verbose) >= 1
+        then Printf.printf "Env  [%i]: %s\n" (stack_size) (show_env s)
+        else Printf.printf "Env  [%i]\n" (stack_size) 
+    
 
     let print_debug_run run_params = function
         | c, e, s, _ -> 
-        Printf.printf "===[%i]===\n" !(run_params.step); incr (run_params.step);
-        Printf.printf "Code:  %s\n" (show_bytecode c);
-        Printf.printf "Stack: %s\n" (print_stack s);
-        Printf.printf "Env:   %s\n" (show_env e)
+        Printf.printf "==={%i}===\n" !(run_params.step); incr (run_params.step);
+        print_debug_code run_params c;
+        print_debug_stack run_params s;
+        print_debug_env run_params e
         
+    let run_check run_params (_, _, s, _) =
+        if List.length s > !(run_params.max_stack)
+        then raise Machine_Stack_Overflow
 
     let run code env = 
         let rec aux : state -> state = fun state ->
         print_debug_run run_params state;
+        run_check run_params state;
         match state with
             | CST b :: c, e, s, d -> 
                 aux (c, e, `CST b :: s, d)

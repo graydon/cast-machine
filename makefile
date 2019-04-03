@@ -36,6 +36,9 @@ uninstall:
 clean:
 	dune clean
 
+watch:
+	@dune watch ./repl.exe $(FLAGS)
+
 top:
 	dune utop $(FLAGS) 
 # Optionally, remove all files/folders ignored by git as defined
