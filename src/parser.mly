@@ -94,10 +94,6 @@ pat_fun:
 					failwith "error: not a pat_fun" end
 		   }
 
-funpat:
-	| f=FUNPAT 
-		{ process_funpat f }
-
 var:
 	| v=IDENT 
 			{ mk_var v }
@@ -107,5 +103,5 @@ pat_const:
 	 		{ parse_cst c }
 
 pat:
-	| t=PAT    			    (* todo: replace all qmarks in t with fresh gradual *)
-			{ parse_t t }   (* variables to have more structured gradual types *)
+	| t=PAT    			    
+		{ parse_t t }   
