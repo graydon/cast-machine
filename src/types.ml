@@ -7,6 +7,12 @@ type subst = CD.Types.Subst.t
 type b = CD.Types.const
 type tau = CD.Types.t
 
+let pp_var : var -> string = 
+  fun _ -> ""
+
+let pp_tau : var -> string =
+  fun _ -> ""
+
 let fresh_var () =
   let n = Oo.id (object end) in
   CD.Var.mk ~internal:false (Printf.sprintf "a%04d" n)

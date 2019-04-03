@@ -7,9 +7,9 @@ open Primitives
     type tau 
     type b
     val pprint_t : t -> string
-    val pprint_tau : tau -> string
-    val pprint_var : var -> string
-    val pprint_cst : b -> string
+    val pp_tau : tau -> string
+    val pp_var : var -> string
+    val pp_b : b -> string
 end *)
 
 (* module type Type_Print_CD = Type_Print 
@@ -32,9 +32,9 @@ struct
             CD.Types.Subst.full_list t 
                 (List.map (fun v -> (v, var (mk_var "?"))) (CD.Var.Set.get dv))
             in CD.Types.Print.string_of_type t'
-    let pprint_var = CD.Var.ident 
-    let pprint_tau = pprint_t
-    let pprint_cst c = 
+    let pp_var = CD.Var.ident 
+    let pp_tau = pprint_t
+    let pp_b c = 
         CD.Types.Print.pp_const (Format.str_formatter) c; Format.flush_str_formatter ()
 end
 
@@ -58,13 +58,13 @@ module Print = struct
         | _ -> ""
 
     let rec (pprint_e : e -> string) = function
-        | Var var -> pprint_var var
-        | Cst b -> pprint_cst b
+        | Var var -> pp_var var
+        | Cst b -> pp_b b
         | Lam (tau, var, e) -> 
-            Printf.sprintf "λ [%s] %s . %s" (pprint_tau tau) (pprint_var var) (pprint_e e) 
+            Printf.sprintf "λ [%s] %s . %s" (pp_tau tau) (pp_var var) (pprint_e e) 
         | Let (x, e1, e2) ->
             Printf.sprintf "let %s = %s in %s"
-                (pprint_var x) (pprint_e e1) (pprint_e e2)
+                (pp_var x) (pprint_e e1) (pprint_e e2)
         | App (e1, e2) -> 
             let s_format : _ format =
                 (match e2 with
@@ -77,7 +77,7 @@ module Print = struct
                 | Lam _ -> "(%s) 〈%s, %s〉" (* careful: influences the variant type *)
                 | Cast _ -> "%s〈%s, %s〉" (* careful: influences the variant type *)
                 | _ -> "%s 〈%s, %s〉") in
-            Printf.sprintf s_format (pprint_e e) (pprint_tau tau1) (pprint_tau tau2)
+            Printf.sprintf s_format (pprint_e e) (pp_tau tau1) (pp_tau tau2)
         | Succ (e) ->
             Printf.sprintf "succ %s" (pprint_e e)
         | Pred (e) ->
@@ -89,7 +89,7 @@ module Print = struct
         | `Pi2 e ->
             Printf.sprintf "π_1 %s" (pprint_e e)
         | `Let (var, e1, e2) ->
-            Printf.sprintf "let %s = %s in %s" (pprint_var var) (pprint_e e1) (pprint_e e2)
+            Printf.sprintf "let %s = %s in %s" (pp_var var) (pprint_e e1) (pprint_e e2)
         | `TLam (av, e) ->
             Printf.sprintf "Λ %s . %s" (pprint_alpha_vector av) (pprint_e e)
         | `TApp (e, tv) ->
@@ -116,13 +116,13 @@ module Print_Symbolic = struct
         String.concat " ; " stv
 
     let rec (pprint_e : e -> string) = function
-        | Var var -> pprint_var var
-        | Cst b -> pprint_cst b
+        | Var var -> pp_var var
+        | Cst b -> pp_b b
         | Lam (tau, var, e) -> 
-            Printf.sprintf "(λ %s . %s) : %s" (pprint_var var) (pprint_e e) (pprint_tau tau) 
+            Printf.sprintf "(λ %s . %s) : %s" (pp_var var) (pprint_e e) (pp_tau tau) 
         | Let (x, e1, e2) ->
             Printf.sprintf "let %s = %s in %s"
-                (pprint_var x) (pprint_e e1) (pprint_e e2)
+                (pp_var x) (pprint_e e1) (pprint_e e2)
         | App (e1, e2) -> 
             Printf.sprintf "(%s) %s" (pprint_e e1) (pprint_e e2)
         | Cast (e, (Cast t | Id t)) ->
@@ -131,7 +131,7 @@ module Print_Symbolic = struct
                 | Lam _ -> "(%s) 〈%s〉" (* careful: influences the variant type *)
                 | Cast _ -> "%s〈%s〉" (* careful: influences the variant type *)
                 | _ -> "%s 〈%s〉") in
-            Printf.sprintf s_format (pprint_e e) (pprint_tau t)
+            Printf.sprintf s_format (pprint_e e) (pp_tau t)
         | Cast (e, _) -> 
             let s_format : _ format = 
                 (match e with
@@ -151,7 +151,7 @@ module Print_Symbolic = struct
         | `Pi2 e ->
             Printf.sprintf "π_1 %s" (pprint_e e)
         | `Let (var, e1, e2) ->
-            Printf.sprintf "let %s = %s in %s" (pprint_var var) (pprint_e e1) (pprint_e e2)
+            Printf.sprintf "let %s = %s in %s" (pp_var var) (pprint_e e1) (pprint_e e2)
         | `TLam (av, e) ->
             Printf.sprintf "Λ %s . %s" (pprint_alpha_vector av) (pprint_e e)
         | `TApp (e, tv) ->

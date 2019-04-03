@@ -87,7 +87,7 @@ module Eager_Calculus = struct
                 | `Cst c -> 
                     if !(exec_info.debug) then
                     begin (* debug *)
-                        print_endline @@ pprint_cst c;
+                        print_endline @@ pp_b c;
                         print_t tau1; print_endline "";
                         print_t (typeof v); print_endline "";
                         print_v v; print_endline "";
