@@ -16,7 +16,7 @@ end
 module CDuce_Dynamic_Types : Dynamic_Type = struct
     type t = Types.t
     type var = Types.var
-    type varset = Types.varset
+    (* type varset = Types.varset *)
     type subst = Types.subst
     type b = Types.b (* surely false *)
     (* type subst = CD.Types.Subst.t *)
@@ -31,12 +31,13 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
     type tau = t
 
     let subst = CD.Types.Subst.full_list
-    let subst_single = CD.Types.Subst.single
-    let variance = CD.Types.Variable.variance
-    let pp_type = CD.Types.Print.pp_type
-    let apply = CD.Types.Arrow.apply (* [apply t1 t2 computes [t1 \circ t2] *)
-    let get = CD.Types.Arrow.get
-    let is_arrow t = subtype t CD.Types.Arrow.any
+    (* let subst_single = CD.Types.Subst.single *)
+    (* let variance = CD.Types.Variable.variance *)
+    (* let pp_type = CD.Types.Print.pp_type *)
+    (* let apply = CD.Types.Arrow.apply *)
+      (* [apply t1 t2 computes [t1 \circ t2] *)
+    (* let get = CD.Types.Arrow.get *)
+    (* let is_arrow t = subtype t CD.Types.Arrow.any *)
 
     let ceil t =
       let _, pos, neg, _ = collect_vars t in

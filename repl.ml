@@ -1,8 +1,6 @@
 open Cast
-open Syntax.SE_CDuce
 open Print.Print
 open Interpreter.Eager_Calculus
-open Compile.Compile1
 open Exec.Exec1
 open Primitives
 

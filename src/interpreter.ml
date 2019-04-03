@@ -132,7 +132,7 @@ module Symbolic_Calculus = struct
             let (t1, t2), (t1', t2') = eval_sigma s1, eval_sigma s2 in
             (cap t1 t1', cap t2 t2')
         | App (t, s) -> 
-            let (t1, t2) = eval_sigma s in
+            let (t1, _) = eval_sigma s in
             let t' = apply t1 t in (t', dom t')
         | Dom s -> 
             let (_, t2) = eval_sigma s in

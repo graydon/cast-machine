@@ -54,7 +54,7 @@ module Print = struct
         String.concat " ; " stv
 
     let (putain : e -> string) = function
-        | Var v -> "bordel"
+        | Var _ -> "bordel"
         | _ -> ""
 
     let rec (pprint_e : e -> string) = function
@@ -114,10 +114,6 @@ module Print_Symbolic = struct
     let pprint_t_vector  = fun tv ->   
         let stv = List.map pprint_t tv in
         String.concat " ; " stv
-
-    let (putain : e -> string) = function
-        | Var v -> "bordel"
-        | _ -> ""
 
     let rec (pprint_e : e -> string) = function
         | Var var -> pprint_var var

@@ -47,6 +47,8 @@ let parse_cst str =
 
 let split = Str.split (Str.regexp " +")
 
+let x = List.mem
+
 let process_funpat f =
     let fl = split f in 
     let fn = String.concat "" (List.tl (fl)) in

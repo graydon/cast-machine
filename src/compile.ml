@@ -1,4 +1,3 @@
-open Primitives
 open Syntax
 
 module Bytecode1 = struct
@@ -12,6 +11,8 @@ module Bytecode1 = struct
               | SUC
               | PRE
               | CAS of bytecode * tau
+              | LET of var
+              | END of var
     and bytecode = byte list 
 end
 
@@ -26,4 +27,5 @@ module Compile1 = struct
         | Cast (e, (tau_1, _)) -> [CAS (compile e, tau_1)]
         | Succ e ->               (compile e) @ [SUC]
         | Pred e ->               (compile e) @ [PRE]
+        | Let (x, e1, e2) ->      (compile e1) @ [LET x] @ (compile e2) @ [END x]
 end

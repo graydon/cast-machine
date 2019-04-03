@@ -32,12 +32,14 @@
 %token <string> IDENT
 %token <string> PAT LETPAT
 %token EOF
-%token LET EQ IN
+%token LET EQ
 
 
 %nonassoc IN IDENT DOT PARCLOSE
 %nonassoc MOD
 
+
+%token IN "IN"
 
 
 /* Starting production. */	
@@ -70,14 +72,17 @@ expr:
 			{ Var v }
 	| FUN t=pat x=var DOT e=expr   
 			{ Lam (t, x, e) }
-	| FUN tp=pat_var DOT e=expr
-			{ Lam (fst tp, snd tp, e) }
-	| fp=pat_fun DOT e=expr
-			{ Lam (fst fp, snd fp, e) }
+	| FUN x=var DOT e=expr
+			{ Lam (qfun (), x, e) }
 	| e=expr MOD t=pat
 			{ Cast (e, (t, dom t)) }
 	| c=pat_const
 			{ Cst c }
+
+pat_let:
+	| p=PAT 
+		{ let sp = split p in List.nth sp 1 }
+		  
 
 pat_var:
 	| p=PAT

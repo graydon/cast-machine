@@ -41,7 +41,7 @@ module Exec1 = struct
                 let e' = Env.add x v e in
                 aux (c', e', `BTC c :: `ENV e :: s, d)
 
-            | RET :: c, e, v :: `BTC c' :: `ENV e' :: s, d ->
+            | RET :: _, _, v :: `BTC c' :: `ENV e' :: s, d ->
                 aux (c', e', v :: s, d)
 
             | SUC :: c, e, `CST (Integer i) :: s, d ->
@@ -64,7 +64,7 @@ module Exec1 = struct
     let print_value : stack_value -> unit = function
         | `CST c -> Print.print_e (Cst c)
         | `BTC _ | `ENV _ -> failwith "wrong type of return value on stack"
-        | `CLS (x,c'') -> Printf.printf "fun %s -> code" (Print.pprint_var x)
+        | `CLS (x,_) -> Printf.printf "fun %s -> code" (Print.pprint_var x)
 
     let wrap_run code = 
         let v = finish (run_init code) in
