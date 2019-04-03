@@ -25,16 +25,17 @@ let succ = CD.Intervals.V.succ
 let pred = CD.Intervals.V.pred
 
 exception Expression_Syntax_Error
-exception Type_Syntax_Error
+exception Type_Syntax_Error of string
+exception Empty_Program
 
 (* transform a string into a cduce type *)
 let parse_t str = 
     try 
     str |> Str.global_substitute (Str.regexp_string "?")
-            (fun _ -> fresh_dyn_id ()) 
+            (fun _ -> " " ^ fresh_dyn_id () ^ " ") 
         |> Stream.of_string |> CD.Parser.pat 
         |> CD.Typer.typ CD.Typer.empty_env |> CD.Types.descr
-    with _ -> raise Type_Syntax_Error
+    with _ -> raise (Type_Syntax_Error str)
 
 let parse_cst str = 
         try
@@ -43,6 +44,14 @@ let parse_cst str =
             |> CD.Compile.compile_eval_expr CD.Compile.empty_toplevel
             |> CD.Value.inv_const
         with _ -> raise Expression_Syntax_Error
+
+let split = Str.split (Str.regexp " +")
+
+let process_funpat f =
+    let fl = split f in 
+    let fn = String.concat "" (List.tl (fl)) in
+	parse_t fn
+
 
 let qmark () = var (fresh_dyn_var ())
 let qm () = cons (qmark ())

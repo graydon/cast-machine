@@ -40,8 +40,10 @@ let rec repl () =
   with Expression_Syntax_Error ->
     print_endline "error: expression syntax";
     repl ()
-       | Type_Syntax_Error ->
-    print_endline "error: type syntax";
+       | Type_Syntax_Error s ->
+    print_endline @@ "error: type syntax " ^ s;
+    repl ()
+       | Empty_Program ->
     repl ()
 
 let _ = repl ()

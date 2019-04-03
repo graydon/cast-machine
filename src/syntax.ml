@@ -86,6 +86,7 @@ module type Cast_Expr = sig
     type e = 
       | Var of var
       | Cst of b
+      | Let of var * e * e
       | Lam of tau * var * e
       | App of e * e
       | Cast of e * castkind
@@ -109,6 +110,7 @@ struct
     type e = 
       | Var of var
       | Cst of b
+      | Let of var * e * e
       | Lam of tau * var * e
       | App of e * e
       | Cast of e * castkind
@@ -144,6 +146,7 @@ struct
     type e = 
       | Var of var
       | Cst of b
+      | Let of var * e * e
       | Lam of tau * var * e
       | App of e * e
       | Cast of e * castkind

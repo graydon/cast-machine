@@ -62,6 +62,9 @@ module Print = struct
         | Cst b -> pprint_cst b
         | Lam (tau, var, e) -> 
             Printf.sprintf "λ [%s] %s . %s" (pprint_tau tau) (pprint_var var) (pprint_e e) 
+        | Let (x, e1, e2) ->
+            Printf.sprintf "let %s = %s in %s"
+                (pprint_var x) (pprint_e e1) (pprint_e e2)
         | App (e1, e2) -> 
             let s_format : _ format =
                 (match e2 with
@@ -121,6 +124,9 @@ module Print_Symbolic = struct
         | Cst b -> pprint_cst b
         | Lam (tau, var, e) -> 
             Printf.sprintf "(λ %s . %s) : %s" (pprint_var var) (pprint_e e) (pprint_tau tau) 
+        | Let (x, e1, e2) ->
+            Printf.sprintf "let %s = %s in %s"
+                (pprint_var x) (pprint_e e1) (pprint_e e2)
         | App (e1, e2) -> 
             Printf.sprintf "(%s) %s" (pprint_e e1) (pprint_e e2)
         | Cast (e, (Cast t | Id t)) ->

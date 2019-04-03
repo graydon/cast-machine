@@ -62,6 +62,10 @@ module Eager_Calculus = struct
             | `Cst (Integer i) -> `Cst (Integer (CD.Intervals.V.pred i))
             | _ -> `Fail end
         | Cst b -> `Cst b
+        | Let (x, e1, e2) ->
+            let v = aux env e1 in
+            let env' = Env.add x v env in
+                aux env' e2
         | Lam (tau, x, e) -> 
             `Closure ((tau, x, e), (tau, dom tau, T), Env.empty)
         | Cast (e, (tau1, tau2)) -> 
@@ -166,6 +170,10 @@ module Symbolic_Calculus = struct
         | `Cst (Integer i) -> `Cst (Integer (CD.Intervals.V.pred i))
         | _ -> `Fail end
     | Cst b -> `Cst b
+    | Let (x, e1, e2) -> 
+        let v = eval_aux env e1 in 
+        let env' = Env.add x (`Cast (v, (Id any))) env in
+            eval_aux env' e2
     | Lam (tau, x, e) -> 
         `Closure ((tau, x, e), Id tau, Env.empty)
     | Cast (e, sigma1) -> 
