@@ -55,6 +55,7 @@ module Print = struct
 
 
     let rec (pprint_e : e -> string) = function
+        | Unit -> "()"
         | Var var -> pp_var var
         | Cst b -> pp_b b
         | Lam (tau, var, e) -> 

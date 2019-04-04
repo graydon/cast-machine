@@ -18,9 +18,11 @@ module Bytecode1 = struct
               | END
               | EQB
               | IFZ of byte list * byte list
+              | UNI
     (* [@@deriving eq,show] *)
     
     let rec show_byte = function
+        | UNI ->    "UNIT"
         | ACC v -> "ACC " ^ (pp_var v)
         | CST b -> "CST " ^ (pp_b b)
         | TYP t -> "TYP " ^ (pp_tau t)
@@ -62,6 +64,7 @@ module Compile1 = struct
         | Pred e ->               (compile e) @ [PRE]
         | Let (x, e1, e2) ->      (compile e1) @ [LET x] @ (compile e2) @ [END]
         | Ifz (cond, e1, e2) ->   (compile cond) @ [IFZ (compile e1, compile e2)]
-        | Eq (e1, e2) ->         (compile e1) @ (compile e2) @ [EQB]
+        | Eq (e1, e2) ->          (compile e1) @ (compile e2) @ [EQB]
+        | Unit ->                 [UNI]
 
 end

@@ -1,3 +1,7 @@
+(* TODO put env in closures *)
+(* init closures with a mark * *)
+(* note : Beppe sait comment avoir les types intersections *)
+
 open Compile
 open Primitives
 open Print
@@ -144,6 +148,10 @@ module Exec1 = struct
             
             | END :: c, e, s, e' :: d ->
                 aux (c, e', s, d)
+
+            (* new instructions *)
+
+
 
             | s -> s
 

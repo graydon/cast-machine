@@ -71,7 +71,9 @@ rule token = parse
   | blank +         { token lexbuf }
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
+	| "->"						{ ARROW }
 	| '='							{ EQ }
+	| ':'							{ COLON }
 	| '%'							{ MOD }
   | '('             { PAROPEN }
   | ')'             { PARCLOSE }
