@@ -1,6 +1,7 @@
 open Types
 
-let zero = CD.Intervals.V.zero
+let zero = CD.Types.Integer CD.Intervals.V.zero
+let one = CD.Types.Integer (CD.Intervals.V.succ CD.Intervals.V.zero)
 let var = CD.Types.var
 let any = CD.Types.any
 let empty = CD.Types.empty

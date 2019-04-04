@@ -84,6 +84,7 @@ module type Cast_Expr = sig
     type alpha_vector
     type t_vector
     type castkind
+    
     type e = 
       | Var of var
       | Cst of b
@@ -92,8 +93,14 @@ module type Cast_Expr = sig
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e
+      | Ifz of e * e * e
+      | Eq of e * e
+      | Unit
       (* | TwoCast of e * tau * tau  *)
     (* type v *)
+     type prog =
+		| Expr of e
+		| Eol
 end
 
 module Make_SE (Init_Type : Dynamic_Type) : (Cast_Expr 
@@ -116,14 +123,19 @@ struct
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e
+      | Ifz of e * e * e
+      | Eq of e * e
+      | Unit
       (* | TwoCast of e * tau * tau  *)
         (* for now no product, let and type abstraction *)
         (* | `Prd of e * e *)
         (* | `Pi1 of e *)
         (* | `Pi2 of e *)
-        (* | `Let of var * e * e *)
         (* | `TLam of alpha_vector * e *)
         (* | `TApp of e * t_vector *)
+      type prog =
+		| Expr of e
+		| Eol
 end
 
 module SE_CDuce = Make_SE(CDuce_Dynamic_Types)

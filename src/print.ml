@@ -53,15 +53,17 @@ module Print = struct
         let stv = List.map pprint_t tv in
         String.concat " ; " stv
 
-    let (putain : e -> string) = function
-        | Var _ -> "bordel"
-        | _ -> ""
 
     let rec (pprint_e : e -> string) = function
         | Var var -> pp_var var
         | Cst b -> pp_b b
         | Lam (tau, var, e) -> 
             Printf.sprintf "λ [%s] %s . %s" (pp_tau tau) (pp_var var) (pprint_e e) 
+        | Eq (e1, e2) ->
+            Printf.sprintf "%s = %s" (pprint_e e1) (pprint_e e2)
+        | Ifz (cond, e1, e2) ->
+            Printf.sprintf "if %s then %s else %s"
+                (pprint_e cond) (pprint_e e1) (pprint_e e2)
         | Let (x, e1, e2) ->
             Printf.sprintf "let %s = %s in %s"
                 (pp_var x) (pprint_e e1) (pprint_e e2)

@@ -18,7 +18,6 @@
 %token DOT 
 %token PAROPEN PARCLOSE
 %token MOD FUN
-%token <string> FUNPAT
 
 (**
 %token MATCH WITH FUN REC RECFUN LET IN IF THEN 
@@ -26,13 +25,14 @@
 %token RECFUNCTION
 %token LET FUNCTION
 **)
-%token COLON
 /* %token LEFTANGLE RIGHTANGLE */
 
 %token <string> IDENT
-%token <string> PAT LETPAT
-%token EOF
+%token <string> PAT 
+%token EOF EOL
 %token LET EQ
+%token IF THEN ELSE
+
 
 
 %nonassoc IN IDENT DOT PARCLOSE
@@ -47,19 +47,21 @@
 
 
 %start prog
-%type <Syntax.SE_CDuce.e>			   prog 
+%type <Syntax.SE_CDuce.prog>			   prog 
 %type <Syntax.SE_CDuce.e>              expr
 %%
 
 /* Parser definition. */
 
 prog:
-	| EOF 
-		{ raise Empty_Program }
+	| EOL 
+		{ Eol }
 	| e=expr EOF 
-		{ e }
+		{ Expr e }
 
 expr:
+	| IF c=cond THEN e1=expr ELSE e2=expr
+			{ Ifz (c, e1, e2) }
 	| LET x=var EQ e1=expr IN e2=expr
 			{ Let (x, e1, e2) }
 	| PAROPEN e1=expr PARCLOSE e2=expr
@@ -79,25 +81,12 @@ expr:
 	| c=pat_const
 			{ Cst c }
 
-pat_let:
-	| p=PAT 
-		{ let sp = split p in List.nth sp 1 }
-		  
+cond:
+	| e1=expr EQ e2=expr 
+		{ Eq (e1, e2) }
+	| e=expr
+		{ e }
 
-pat_var:
-	| p=PAT
-		{ let sp = split p in 
-		  get_var_pat sp }
-
-pat_fun:
-	| p=PAT
-		{ let sp = split p in 
-		  let fp = List.hd sp in 
-		  match fp with
-		  | "fun" -> get_var_pat (List.tl sp)
-		  | _ -> begin print_endline @@ "{" ^ fp ^ "}";
-					failwith "error: not a pat_fun" end
-		   }
 
 var:
 	| v=IDENT 

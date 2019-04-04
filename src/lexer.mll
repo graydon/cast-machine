@@ -24,6 +24,9 @@ let trim_dollar s =
 			("let",         LET);
 			("in",          IN);
 			("fun",					FUN);
+			("then", 				THEN);
+			("if", 			  	IF);
+			("else",				ELSE);
 		]
 
 	let filter_id id =
@@ -69,28 +72,20 @@ let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
 let any 						= _*
 
 rule token = parse
-	| newline
-			{ let pos = lexbuf.lex_curr_p in
-				lexbuf.lex_curr_p <-
-				{ pos with
-				    pos_lnum = pos.pos_lnum + 1;
-				    pos_bol  = pos.pos_cnum;
-				};
-				token lexbuf }
+	| newline					{ EOL }
   | blank +         { token lexbuf }
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
 	| '='							{ EQ }
 	| '%'							{ MOD }
 	| ";;"						{ EOF }
-	| ':'						  { COLON }
   | '('             { PAROPEN }
   | ')'             { PARCLOSE }
 	| '\\' 						{ FUN }
   | ident as id     { filter_id id }
 	| pat as t     		{ print_endline @@ "pat: " ^ t; PAT t }		
-	| eof             { EOF }
-	| _ as c							{ print_endline @@ "fail: " ^ (Lexing.lexeme lexbuf); failwith "Lexing error" }
+	| eof             { EOL }
+	| _ 							{ print_endline @@ "lex failure: " ^ (Lexing.lexeme lexbuf); failwith "Lexing error" }
 
 
 and comment = parse

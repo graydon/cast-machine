@@ -68,6 +68,15 @@ module Eager_Calculus = struct
                 aux env' e2
         | Lam (tau, x, e) -> 
             `Closure ((tau, x, e), (tau, dom tau, T), Env.empty)
+        | Ifz (cond, e1, e2) ->
+            let v = aux env cond in 
+            if v = `Cst zero then aux env e1
+            else aux env e2
+        | Eq (e1, e2) ->
+            let v1 = aux env e1 in
+            let v2 = aux env e2 in 
+            if v1 = v2 then `Cst zero
+            else `Cst one
         | Cast (e, (tau1, tau2)) -> 
             begin match (aux env e) with
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail

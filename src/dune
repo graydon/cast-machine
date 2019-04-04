@@ -13,5 +13,5 @@
 (library
     (name cast)
     (libraries threads cduce str)
-    (modules parser syntax types primitives lexer print interpreter compile exec)
+    (modules parser syntax types primitives lexer print interpreter compile exec errors)
     (preprocess (pps ppx_deriving.show ppx_deriving.eq)))

@@ -115,10 +115,17 @@ module Exec1 = struct
             | ACC x :: c, e, s, d ->
                 aux (c, e, (Env.find x e) :: s, d)
 
+            | IFZ (c1, _) :: c, e, `CST b :: s, d 
+                when b = Primitives.zero ->
+                aux (c1 @ c, e, s, d)
+
+            | IFZ (_, c2) :: c, e, _ :: s, d ->
+                aux (c2 @ c, e, s, d)
+
             | CLS (x, c') :: c, e, s, d ->
                 aux (c, e, `CLS (x,c') :: s, d)
 
-            | APP :: c, e, `CLS (x,c') :: v :: s, d ->
+            | APP :: c, e,  v :: `CLS (x,c') :: s, d ->
                 let e' = Env.add x v e in
                 aux (c', e', `BTC c :: `ENV e :: s, d)
 
