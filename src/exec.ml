@@ -56,36 +56,46 @@ module Exec1 = struct
         {run : bool ref;
          step : int ref;
          max_stack : int ref;
-         verbose : int ref}
+         verbose : int ref;
+         delim : int ref}
 
     let run_params =
         {run = ref true;
          step = ref 0;
          max_stack = ref 300;
-         verbose = ref 1}
+         verbose = ref 1;
+         delim = ref 2}
+
+    let delim n i =
+        let si = string_of_int i in 
+        let d = String.length si in
+        String.init (n+1-d) (fun _ -> ' ')
 
     let print_debug_stack run_params s =
         let stack_size = List.length s in
         if stack_size < 20 && !(run_params.verbose) >= 1
-        then Printf.printf "Stack[%i]: %s\n" (stack_size) (print_stack s)
+        then Printf.printf "Stack[%i]:%s%s\n" (stack_size) 
+        (delim !(run_params.delim) stack_size) (print_stack s)
         else Printf.printf "Stack[%i]\n" (stack_size) 
 
     let print_debug_code run_params s =
         let stack_size = List.length s in
         if stack_size < 20 && !(run_params.verbose) >= 1
-        then Printf.printf "Code [%i]: %s\n" (stack_size) (show_bytecode s)
+        then Printf.printf "Code [%i]:%s%s\n" (stack_size) 
+        (delim !(run_params.delim) stack_size) (show_bytecode s)
         else Printf.printf "Code [%i]\n" (stack_size) 
 
     let print_debug_env run_params s =
         let stack_size = List.length (List.of_seq @@ Env.to_seq s) in
         if stack_size < 20 && !(run_params.verbose) >= 1
-        then Printf.printf "Env  [%i]: %s\n" (stack_size) (show_env s)
+        then Printf.printf "Env  [%i]:%s%s\n" (stack_size)
+        (delim !(run_params.delim) stack_size) (show_env s)
         else Printf.printf "Env  [%i]\n" (stack_size) 
     
 
     let print_debug_run run_params = function
         | c, e, s, _ -> 
-        Printf.printf "==={%i}===\n" !(run_params.step); incr (run_params.step);
+        Printf.printf "==={%i}========================================================================\n" !(run_params.step); incr (run_params.step);
         print_debug_code run_params c;
         print_debug_stack run_params s;
         print_debug_env run_params e

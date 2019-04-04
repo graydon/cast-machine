@@ -13,6 +13,7 @@ build:
 		ln -s "$(CDUCE_LIB_DIR)/../ocaml/camlp4/camlp4lib.cma" "$(CDUCE_LIB_DIR)/+camlp4";\
 	fi
 	@dune build repl.exe $(FLAGS)
+	rm -f cast.exe
 	echo "#! /bin/sh" >> cast.exe
 	echo "" >> cast.exe
 	echo "rlwrap -a _build/default/repl.exe \"\$$@\" " >> cast.exe
