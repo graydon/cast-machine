@@ -9,19 +9,19 @@ open Lexing
 type parameters_structure =
   {debug : bool ref;
    symbolic : string ref;
-   machine: string ref}
+   machine: string ref;
+   load_file : bool ref}
 
 let params =
   {debug = ref true;
   symbolic = ref "";
-  machine = ref ""}
+  machine = ref "";
+  load_file = ref false}
 
-let () = if Array.length (Sys.argv) > 1
-         then match Sys.argv.(1) with
-         | "--machine" -> params.machine := "machine mode"
-         | "--symbolic" -> params.symbolic := "symbolic"
-         | "--load" -> (* params.machine := "machine mode" *) ()
-         | _ -> ()
+let () = if Array.length (Sys.argv) > 1 then begin
+         (if Array.mem "--machine" Sys.argv then params.machine := "machine mode");
+         (if Array.mem "--symbolic" Sys.argv then params.symbolic := "symbolic");
+         (if Array.mem "--load" Sys.argv then params.load_file := true) end
 
 let eval_with_parameters params e =
   let () = if !(params.debug) then (print_e e; print_endline "") in
@@ -108,7 +108,7 @@ and get_code file_name = begin
 end
 
 let _ =
-  if Array.length Sys.argv > 2 && Sys.argv.(1) = "--load" then
+  if !(params.load_file) then
     let prog = get_code Sys.argv.(2) in
     List.iter
     (function
