@@ -44,12 +44,12 @@ module Eager_Calculus = struct
     let eval : e -> v = fun e ->
         let rec aux : env -> e -> v = fun env e -> 
             if !(exec_info.debug) then begin
-                print_string 
-                    (String.init !(exec_info.depth) (fun _ -> '\t'));
+                print_string (String.init !(exec_info.depth) (fun _ -> '\t'));
                 print_e e; incr exec_info.depth; 
                 if not !(exec_info.inline) then print_endline "";
                 exec_info.inline := false end;
         match e with 
+        | Unit -> `Cst (parse_cst "")
         | Var x -> begin
             try Env.find x env
             with Not_found -> 

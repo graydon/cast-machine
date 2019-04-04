@@ -29,7 +29,7 @@
 
 %token <string> IDENT
 %token <string> PAT 
-%token EOF EOL
+%token EOF EOL ENDEXPR
 %token LET EQ
 %token IF THEN ELSE
 
@@ -56,7 +56,7 @@
 prog:
 	| EOL 
 		{ Eol }
-	| e=expr EOF 
+	| e=expr ENDEXPR 
 		{ Expr e }
 
 expr:

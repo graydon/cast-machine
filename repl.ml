@@ -20,11 +20,11 @@ let () = if Array.length (Sys.argv) > 1
          then match Sys.argv.(1) with
          | "--machine" -> params.machine := "machine mode"
          | "--symbolic" -> params.symbolic := "symbolic"
-         | "--load" -> params.machine := "machine mode"
+         | "--load" -> (* params.machine := "machine mode" *) ()
          | _ -> ()
 
 let eval_with_parameters params e =
-  let () = if !(params.debug) then print_e e; print_endline "" in
+  let () = if !(params.debug) then (print_e e; print_endline "") in
   if !(params.machine) = "" then wrap_eval e
   else
       let btc = compile e in

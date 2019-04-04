@@ -43,17 +43,12 @@ let trim_dollar s =
 
 	let split = Str.split (Str.regexp " +")
 
-	(* let treat_pat p = 
-		let sp = split p in
-		if List.mem "in" sp 
-			then 
-		else match List.hd sp with
-		| "let" -> LETPAT (String.concat "" (List.tl sp))
-		| "fun" -> FUNPAT (String.concat "" (List.tl sp)) 
-			(* actually FUNPAT is a FUNPAT (pat * var) *)
-		| _ -> PAT p *)
-
-
+	let incr_linenum lexbuf =
+    let pos = lexbuf.Lexing.lex_curr_p in
+    lexbuf.Lexing.lex_curr_p <- {pos with
+        Lexing.pos_lnum = pos.Lexing.pos_lnum + 1;
+        Lexing.pos_bol = pos.Lexing.pos_cnum;
+    }
 }
 
 (* Rules. *)
@@ -72,19 +67,19 @@ let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
 let any 						= _*
 
 rule token = parse
-	| newline					{ EOL }
+	| newline					{ incr_linenum lexbuf; token lexbuf }
   | blank +         { token lexbuf }
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
 	| '='							{ EQ }
 	| '%'							{ MOD }
-	| ";;"						{ EOF }
   | '('             { PAROPEN }
   | ')'             { PARCLOSE }
 	| '\\' 						{ FUN }
+  | ";;"				    { ENDEXPR }
   | ident as id     { filter_id id }
-	| pat as t     		{ print_endline @@ "pat: " ^ t; PAT t }		
-	| eof             { EOL }
+	| pat as t     		{  PAT t }
+	| eof 						{ EOL }
 	| _ 							{ print_endline @@ "lex failure: " ^ (Lexing.lexeme lexbuf); failwith "Lexing error" }
 
 

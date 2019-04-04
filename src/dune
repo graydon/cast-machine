@@ -4,7 +4,7 @@
 
 (menhir
   (modules parser)
-  (flags ("-la" "2" "--explain" "--trace"))
+  (flags ("-la" "2"))
 )
 
 ; add  "--trace" "--explain" to flags in order to debug
