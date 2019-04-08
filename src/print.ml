@@ -58,7 +58,7 @@ module Print = struct
         | Unit -> "()"
         | Var var -> pp_var var
         | Cst b -> pp_b b
-        | Lam (tau, var, e) -> 
+        | Lam (tau, var, e) | Lamrec (tau, var, e)  -> 
             Printf.sprintf "λ [%s] %s . %s" (pp_tau tau) (pp_var var) (pprint_e e) 
         | Eq (e1, e2) ->
             Printf.sprintf "%s = %s" (pprint_e e1) (pprint_e e2)
@@ -85,6 +85,12 @@ module Print = struct
             Printf.sprintf "succ %s" (pprint_e e)
         | Pred (e) ->
             Printf.sprintf "pred %s" (pprint_e e)
+        | Mult (e1, e2) ->
+            Printf.sprintf "%s * %s" (pprint_e e1) (pprint_e e2)
+        | Plus (e1, e2) ->
+            Printf.sprintf "%s + %s" (pprint_e e1) (pprint_e e2)
+        | Minus (e1, e2) ->
+            Printf.sprintf "%s - %s" (pprint_e e1) (pprint_e e2)
         (* | `Prd (e1, e2) ->
             Printf.sprintf "(%s, %s)" (pprint_e e1) (pprint_e e2)
         | `Pi1 e -> 

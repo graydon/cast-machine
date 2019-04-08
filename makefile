@@ -21,6 +21,10 @@ build:
 	@echo ""
 	@echo "Build finished. You can now start ./cast.exe"
 
+debug:
+	dune build repl.exe $(FLAGS) --debug-backtraces
+	rlwrap -a ocamldebug ./_build/default/repl.exe
+
 run: build
 	@rlwrap -a ./_build/default/repl.exe
 

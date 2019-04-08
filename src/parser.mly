@@ -17,7 +17,7 @@
 
 %token DOT COLON
 %token PAROPEN PARCLOSE
-%token MOD FUN ARROW
+%token MOD FUN ARROW REC TIMES PRED SUCC
 
 (**
 %token MATCH WITH FUN REC RECFUN LET IN IF THEN 
@@ -31,10 +31,12 @@
 %token <string> PAT 
 %token EOL ENDEXPR
 %token LET EQ
-%token IF THEN ELSE
+%token IF THEN ELSE PLUS MINUS 
 
 %nonassoc IN IDENT PARCLOSE ELSE FUN
 %nonassoc MOD
+%left PLUS MINUS
+%left TIMES
 
 
 %token IN "IN"
@@ -60,14 +62,8 @@ prog:
 expr:
 	| IF c=cond THEN e1=expr ELSE e2=expr
 			{ Ifz (c, e1, e2) }
-	| LET x=var EQ e1=expr IN e2=expr
-			{ Let (x, e1, e2) }
-	| LET f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Lam (t, x, e1), e2) }
-	| LET f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Lam (cap t1 t2, x, e1), e2) }
-	| LET f=var x=var EQ e1=expr IN e2=expr
-			{ Let (f, Lam (qfun (), x, e1), e2) } 
+	| l=let_pattern
+			{ l }	
 	| PAROPEN e1=expr PARCLOSE e2=expr
 			{ App (e1, e2) }
 	| PAROPEN e=expr PARCLOSE
@@ -84,6 +80,37 @@ expr:
 			{ Cast (e, (t, dom t)) }
 	| c=pat_const
 			{ Cst c }
+	| PRED e=expr 
+			{ Pred (e) }
+	| SUCC e=expr
+			{ Succ (e) }
+	| b=binop  
+			{ b }
+
+binop:
+	| e1=expr TIMES e2=expr 
+		{ Mult (e1, e2) }
+	| e1=expr PLUS e2=expr
+		{ Plus (e1, e2) }
+	| e1=expr MINUS e2=expr
+		{ Minus (e1, e2) }
+	
+
+let_pattern:
+	| LET x=var EQ e1=expr IN e2=expr
+			{ Let (x, e1, e2) }
+	| LET f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
+			{ Let (f, Lam (t, x, e1), e2) }
+	| LET f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
+			{ Let (f, Lam (cap t1 t2, x, e1), e2) }
+	| LET f=var x=var EQ e1=expr IN e2=expr
+			{ Let (f, Lam (qfun (), x, e1), e2) } 
+	| LET REC f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
+			{ Let (f, Lamrec (t, x, e1), e2) }
+	| LET REC f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
+			{ Let (f, Lamrec (cap t1 t2, x, e1), e2) }
+	| LET REC f=var x=var EQ e1=expr IN e2=expr
+			{ Let (f, Lamrec (qfun (), x, e1), e2) } 
 
 fun_delim : DOT {} | ARROW {}
 

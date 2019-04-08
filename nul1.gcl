@@ -1,5 +1,0 @@
-let f =
-    fun x .
-    if x then "youpi"
-    else "bof"
-in f 10;;

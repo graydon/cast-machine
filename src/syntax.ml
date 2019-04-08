@@ -89,10 +89,12 @@ module type Cast_Expr = sig
       | Var of var
       | Cst of b
       | Let of var * e * e
+      | Lamrec of tau * var * e
       | Lam of tau * var * e
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e
+      | Mult of e * e | Plus of e * e | Minus of e * e
       | Ifz of e * e * e
       | Eq of e * e
       | Unit
@@ -119,10 +121,12 @@ struct
       | Var of var
       | Cst of b
       | Let of var * e * e
+      | Lamrec of tau * var * e
       | Lam of tau * var * e
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e
+      | Mult of e * e | Plus of e * e | Minus of e * e
       | Ifz of e * e * e
       | Eq of e * e
       | Unit

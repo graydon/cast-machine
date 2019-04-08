@@ -10,25 +10,37 @@ type parameters_structure =
   {debug : bool ref;
    symbolic : string ref;
    machine: string ref;
-   load_file : bool ref}
+   load_file : bool ref;
+   verbose : int ref}
 
 let params =
-  {debug = ref true;
+  {debug = ref false;
   symbolic = ref "";
   machine = ref "";
-  load_file = ref false}
+  load_file = ref false;
+  verbose = ref 0}
+
+let rec find a x n =
+if a.(n) = x then n 
+else find a x (n+1);;
 
 let () = if Array.length (Sys.argv) > 1 then begin
          (if Array.mem "--machine" Sys.argv then params.machine := "machine mode");
          (if Array.mem "--symbolic" Sys.argv then params.symbolic := "symbolic");
-         (if Array.mem "--load" Sys.argv then params.load_file := true) end
+         (if Array.mem "--load" Sys.argv then params.load_file := true);
+         (if Array.mem "--debug" Sys.argv then params.debug := true);
+         (if Array.mem "--verbose" Sys.argv then 
+          let i = find Sys.argv "--verbose" 0 in params.verbose := (int_of_string @@ Sys.argv.(i+1))) end
 
 let eval_with_parameters params e =
-  let () = if !(params.debug) then (print_e e; print_endline "") in
+  let () = if !(params.debug) 
+    then (print_string "Program: "; print_e e; print_endline "") in
   if !(params.machine) = "" then wrap_eval e
   else
+      let () = if !(params.debug) then print_endline "Compiling.." in
       let btc = compile e in
-      wrap_run btc
+      let () = if !(params.debug) then print_endline "Running bytecode.." in
+      wrap_run btc !(params.debug) !(params.verbose)
 
 let rec repl () = 
   try

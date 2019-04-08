@@ -22,12 +22,15 @@ let trim_dollar s =
 
 	let table = [
 			("let",         LET);
+			("rec",					REC);
 			("in",          IN);
 			("fun",					FUN);
 			("then", 				THEN);
 			("if", 			  	IF);
 			("else",				ELSE);
-		]
+			("pred",				PRED);
+			("succ", 				SUCC)
+			]
 
 	let filter_id id =
 		try List.assoc id table
@@ -57,14 +60,21 @@ let newline         =  ('\010' | '\013' | "\013\010")
 let blank           = [' ' '\009' '\012']
 (* let decimal_literal = '-'? ['0'-'9'] ['0'-'9' '_']* *)
 let ident           = '$'? ['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
-let pp							= ['?' '0'-'9' 'A'-'Z' '_' '-' '>' '|' '&' '[' ']']+
-let ppvar           = '\'' ['?' '0'-'9' 'A'-'Z' '_' '-' '>' '|' '&' '[' ']']+
+let struct		 			= ' '* ("->"|"|"|"&"|"\\"|"--"|","|";") ' '*
+(*items: strings, atoms, typevars, intervals *)
+let ppcst						= (['?' '0'-'9' '_']|"--")+			
+(* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
+let ppvar           = '\'' ['?' '0'-'9' 'A'-'Z' 'a'-'b' '_']+
 let ppstr 					= '"' ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']* '"'
-let parpp 					= '(' (pp|ppvar|ppstr) ')'
-let allpp						= (pp|ppvar|parpp|ppstr)
-let pat 					  = (allpp)+ (' '? (allpp))*
+let ppitem					= ppcst|ppvar|ppstr
+(*delimiters: parenthesis, brackets, braces *)
+let dopen 					= ['(' '[' '{']
+let dclose 					= [')' ']' '}']
+let ppitems 				= (dopen ' '* ppitem ' '* dclose) | ppitem
+let ppatoms					= dopen ppitems struct ppitems dclose
+										| ppitems struct ppitems | ppitems
+let pat 						= (ppatoms | dopen+ ppatoms dclose+) (struct (dopen* ppatoms dclose*))*
 let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
-let any 						= _*
 
 rule token = parse
 	| newline					{ incr_linenum lexbuf; token lexbuf }
@@ -72,6 +82,9 @@ rule token = parse
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
 	| "->"						{ ARROW }
+	| '*'							{ TIMES }
+	| '+'							{ PLUS }
+	| '-'							{ MINUS }
 	| '='							{ EQ }
 	| ':'							{ COLON }
 	| '%'							{ MOD }
