@@ -1,0 +1,6 @@
+let zero = fun f -> fun x -> x in
+let succ = fun n ->
+           fun f -> 
+           fun x -> f ((n f) x) in
+let one = succ zero in 
+    one (fun x -> x) 0;;

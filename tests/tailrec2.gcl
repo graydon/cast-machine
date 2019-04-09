@@ -1,0 +1,4 @@
+(* this one seems to correctly hang, no Machine_Stack_Overflow *)
+let rec f : Int -> Int =
+    fun n -> f (n-1)
+in f 100;;

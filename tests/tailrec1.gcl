@@ -1,0 +1,5 @@
+let rec f : Int -> Int = 
+    fun n -> 
+    if n then 1
+    else f (n-1)
+in f 100;;

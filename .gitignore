@@ -12,3 +12,4 @@ vec.ml
 src/yarn.lock
 src/node_modules
 cast.exe
+.vscode
