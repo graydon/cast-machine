@@ -5,6 +5,7 @@
 open Compile
 open Primitives
 open Print
+open Utils
 
 module Exec1 = struct
     include Compile1
@@ -25,6 +26,7 @@ module Exec1 = struct
         | `BTC of bytecode 
         | `ENV of env
         | `CLS of var * bytecode * env * interface
+        | `RCL of var * var * bytecode * env * interface
         | `TYP of tau
         | `FAIL
         ]
@@ -47,71 +49,96 @@ module Exec1 = struct
 
     let rec show_stack_value : stack_value -> string = function
     | `CST b -> pp_b b
-    | `BTC btc -> show_bytecode btc
-    | `ENV env -> show_env env
+    | `BTC btc -> show_bytecode 2 btc
+    | `ENV env -> show_env 1 true env
     | `CLS (v, btc, env, inter) -> 
         Printf.sprintf "C(%s, %s, %s, %s)"
-        (pp_var v) (show_bytecode btc) (show_env env)
+        (pp_var v) (show_bytecode 2 btc) (show_env 1 true env)
         (show_interface inter)
+    | `RCL (f, v, btc, env, inter) ->
+        Printf.sprintf "C(%s, %s, %s, %s, %s)"
+        (pp_var f) (pp_var v) (show_bytecode 2 btc)
+        (show_env 1 true env) (show_interface inter)
     | `TYP t -> pp_tau t
     | `FAIL -> "Fail"
 
-    and show_env_value : stack_value -> string = function
-    | `CST b -> pp_b b
-    | `BTC btc -> show_bytecode btc
-    | `ENV env -> "{ nonempty env }"
-    | `CLS (v, btc, env, inter) -> 
-        Printf.sprintf "C(%s, %s, { env }, %s)"
-        (pp_var v) (show_bytecode btc)  (show_interface inter)
-    | `TYP t -> pp_tau t
-    | `FAIL -> "Fail"
+    and show_env_value : int -> stack_value -> string = 
+    function
+    | 2 ->
+        begin function
+        | `CST b -> pp_b b
+        | `BTC btc -> show_bytecode 2 btc
+        | `ENV env -> "{ nonempty env }"
+        | `CLS (v, btc, env, inter) -> 
+            Printf.sprintf "C(%s, %s, %s, %s)"
+            (pp_var v) (show_bytecode 2 btc) 
+            (show_env 1 true env) (show_interface inter)
+        | `RCL (f, v, btc, env, inter) ->
+            Printf.sprintf "C(%s, %s, %s, %s, %s)"
+            (pp_var f) (pp_var v) (show_bytecode 2 btc) 
+            (show_env 1 true env) (show_interface inter)
+        | `TYP t -> pp_tau t
+        | `FAIL -> "Fail" end
+    | 0 -> (fun _ -> "_")
+    | 1 -> show_stack_value_1
+    | _ -> failwith "wrong verbose argument"
 
     and show_result : stack_value -> string = function
     | `CST b -> 
         Printf.sprintf ": %s = %s" (pp_tau (constant b)) (pp_b b)
     | `CLS (v, btc, _, _) -> 
-        Printf.sprintf ": %s -> %s = <fun>" (pp_var v) (show_bytecode btc)
+        Printf.sprintf ": %s -> %s = <fun>" (pp_var v) (show_bytecode 2 btc)
     | `FAIL -> "Fail"
     | _ -> failwith "not a return value"
 
-    and show_env : env -> string =
-    fun env ->
+    and show_env : int -> bool -> env -> string =
+    fun verb inline env ->
         let lenv = List.of_seq (Env.to_seq env) in
-        "{" ^ String.concat " , "
+        let sep = if inline then " . " else "\n\t     " in
+        if lenv = [] then "{}" else
+        "{ " ^ String.concat sep
             (List.map
                 (fun (v,sv) -> Printf.sprintf "(%s := %s)"
-                (pp_var v) (show_env_value sv)) 
-                lenv) ^ "}"
+                (pp_var v) (show_env_value verb sv)) 
+                lenv) ^ " }"
 
     and show_dump_item : dump_item -> string = function
     | Boundary t -> Printf.sprintf "<%s>" (pp_tau t)
-    | Frame (c,e) -> Printf.sprintf "([code], {env})"
+    | Frame (c,e) -> Printf.sprintf "([code], %s)" (show_env 1 true e)
 
     and show_dump : dump -> string =
     fun d ->
-        (String.concat " . "
+        (String.concat "\n\t   "
         (List.map show_dump_item d))
 
-    let show_stack_value_1 : stack_value -> string = function
+    and show_stack_value_1 : stack_value -> string = function
     | `CST b -> pp_b b
     | `BTC _ -> "[code]"
     | `ENV _ -> "{env}"
-    | `CLS _ -> "C(...)"
+    | `CLS (x,_,env,bnd) -> Printf.sprintf "C(%s,...,%s, %s)" 
+        (pp_var x) (show_env 0 true env) 
+        @@ show_interface bnd
+    | `RCL (f,x,_,env,bnd) -> Printf.sprintf "Cr(%s,%s,...,%s, %s)" 
+        (pp_var f) (pp_var x) (show_env 0 true env) 
+        @@ (function |Pass -> "Pass"|Strict _-> "Strict"|Result _->"Result") bnd
     | `TYP t -> pp_tau t
     | `FAIL -> "Fail" 
 
-    let print_stack s verbose = 
-    let show_stack = begin match verbose with
+    let show_stack s verbose = 
+    let show_stack_val = begin match verbose with
     | 2 -> show_stack_value
     | 1 -> show_stack_value_1
     | 0 -> fun _ -> ""
     | _ -> failwith "wrong verbose argument" end
     in
         Printf.sprintf "[ %s ]" 
-        (String.concat " . "
-        (List.map show_stack s))
+        (String.concat "\n\t     "
+        (List.map show_stack_val s))
 
     exception Machine_Stack_Overflow
+
+    type metrics = 
+        {mutable stack_sizes : int list}
 
     type run_params =
         {run : bool ref;
@@ -119,59 +146,82 @@ module Exec1 = struct
          max_stack : int ref;
          verbose : int ref;
          delim : int ref;
-         debug : bool ref}
+         debug : bool ref;
+         step_mode : bool ref;
+         monitor : bool ref;
+         mutable states : state list;
+         mutable metrics : metrics}
+
+    let init_metrics = {stack_sizes = []}
 
     let run_params =
         {run = ref true;
          step = ref 0;
-         max_stack = ref 300;
+         max_stack = ref 10000;
          verbose = ref 2;
          delim = ref 2;
-         debug = ref true}
+         debug = ref true;
+         step_mode = ref false;
+         monitor = ref false;
+         states = [];
+         metrics = init_metrics}
 
     let delim n i =
         let si = string_of_int i in 
         let d = String.length si in
         String.init (n+1-d) (fun _ -> ' ')
 
+    let rec firstk k xs = match xs with
+    | [] -> []
+    | x::xs -> if k=1 then [x] else x::firstk (k-1) xs;;
+
+
     let print_debug_stack run_params s =
         let stack_size = List.length s in
-        if stack_size < 10 && !(run_params.verbose) >= 1
+        if !(run_params.verbose) >= 1
         then 
         let d = delim !(run_params.delim) stack_size in
         let ssize = string_of_int stack_size in 
-        let strstack = print_stack s !(run_params.verbose) in
-        Printf.printf "Stack[%s]:%s %s\n" ssize d strstack
+        let strstack = show_stack (firstk 4 s) !(run_params.verbose) in
+        Printf.printf "Stack[%s]:%s%s\n" ssize d strstack
         else 
          Printf.printf "Stack[%i]\n" (stack_size) 
 
     let print_debug_code run_params s =
         let stack_size = List.length s in
-        if stack_size < 20 && !(run_params.verbose) >= 1
+        if !(run_params.verbose) >= 1
         then Printf.printf "Code [%i]:%s%s\n" (stack_size) 
-        (delim !(run_params.delim) stack_size) (show_bytecode s)
+        (delim !(run_params.delim) stack_size) 
+        (show_bytecode !(run_params.verbose) (firstk 7 s))
         else Printf.printf "Code [%i]\n" (stack_size) 
 
     let print_debug_env run_params s =
         let stack_size = List.length (List.of_seq @@ Env.to_seq s) in
         if stack_size < 20 && !(run_params.verbose) >= 1
-        then Printf.printf "Env  [%i]:%s%s\n" (stack_size)
-        (delim !(run_params.delim) stack_size) (show_env s)
+        then Printf.printf "Env  [%i]:%s%s\n" 
+        (stack_size)
+        (delim !(run_params.delim) stack_size) 
+        (show_env !(run_params.verbose) false s)
         else Printf.printf "Env  [%i]\n" (stack_size) 
 
     let print_debug_dump run_params s =
         let stack_size = List.length s in
-        if stack_size < 20 && !(run_params.verbose) >= 1
-        then Printf.printf "Env  [%i]:%s%s\n" (stack_size)
-        (delim !(run_params.delim) stack_size) (show_dump s)
-        else Printf.printf "Env  [%i]\n" (stack_size) 
+        if !(run_params.verbose) >= 1
+        then Printf.printf "Dump [%i]:%s%s\n" (stack_size)
+        (delim !(run_params.delim) stack_size) 
+        (show_dump (firstk 4 s))
+        else Printf.printf "Dump [%i]\n" (stack_size) 
     
-    let print_debug_run run_params = function
+    let print_debug_run run_params  = function
         | c, e, s, d -> 
         Printf.printf "==={%i}========================================================================\n" !(run_params.step); incr (run_params.step);
+        Pervasives.flush stdout; 
         print_debug_code run_params c;
+        Pervasives.flush stdout; print_endline "";
         print_debug_stack run_params s;
+        Pervasives.flush stdout; print_endline "";
         print_debug_env run_params e;
+        Pervasives.flush stdout; print_endline "";
         print_debug_dump run_params d;
         Pervasives.flush stdout
         
@@ -179,12 +229,38 @@ module Exec1 = struct
         if List.length s > !(run_params.max_stack)
         then raise Machine_Stack_Overflow
 
+    let gather_metrics : run_params -> state -> unit =
+        fun run_params -> let met = run_params.metrics in
+        fun (c, e, s, d) ->
+        begin
+        met.stack_sizes <- (List.length s) :: met.stack_sizes;
+        run_params.metrics <- met
+        end
+
+
     let run code env = 
         let rec aux : state -> state = fun state ->
+        let () = if !(run_params.monitor) then
+        gather_metrics run_params state in
         let () = if !(run_params.debug) then
         print_debug_run run_params state in
-        run_check run_params state;
-        match state with
+        let () = run_check run_params state in
+        let ref_state = ref state in
+        let () = if !(run_params.step_mode) then
+        begin 
+            let cmd = read_line () in 
+            begin
+            if cmd = "b" then 
+                begin
+                ref_state := List.hd run_params.states;
+                run_params.states <- List.tl run_params.states;
+                run_params.step := !(run_params.step)-1
+                end
+            else
+                run_params.states <- state :: run_params.states
+            end
+        end in
+        match !(ref_state) with
             | CST b :: c, e, s, d -> 
                 aux (c, e, `CST b :: s, d)
 
@@ -198,17 +274,13 @@ module Exec1 = struct
             | IFZ (_, c2) :: c, e, _ :: s, d ->
                 aux (c2 @ c, e, s, d)
 
-            | CLS (false, x, c', inter) :: c, e, s, d ->
-                aux (c, e, `CLS (x, c', Env.copy e, inter) :: s, d)
-
-            | CLS (true, x, c', inter) :: c, e, s, d ->
-                let () = Env.add e x (`CLS (x, c', Env.copy e, inter)) in
+            | CLS (x, c', inter) :: c, e, s, d ->
                 aux (c, e, `CLS (x, c', Env.copy e, inter) :: s, d)
             
-
-            | APP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
-                let () = Env.add e' x v in
-                aux (c', e', `BTC c :: `ENV e :: s, Frame (c, Env.copy e) :: d)
+            | RCL (f, x, c', inter) :: c, e, s, d ->
+                let e' = Env.copy e in
+                let () = Env.add e' f @@ `CLS (x, c', e', inter) in
+                aux (c, e, `CLS (x, c', e', inter) :: s, d)
 
             | RET :: _, _, v :: s, Frame (c', e') :: d ->
                 aux (c', e', v :: s, d)
@@ -224,11 +296,13 @@ module Exec1 = struct
 
             | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                 aux (c, e, `CST (Integer (add i1 i2)) :: s, d) 
+            
+            | SUB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
+                aux (c, e, `CST (Integer (sub i2 i1)) :: s, d) 
 
             | LET x :: c, e, v :: s, d ->
-                let e' = Env.copy e in
-                let () = Env.add e' x v  in
-                aux (c, e', s, d)
+                let () = Env.add e x v  in
+                aux (c, e, s, d)
             
             | END x :: c, e, s, d ->
                 let () = Env.remove e x in
@@ -242,13 +316,13 @@ module Exec1 = struct
             | (TAP|APP) :: c, e, _ :: `FAIL :: s, d -> 
                 aux (c, e, `FAIL :: s, d)
 
-            | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, Frame (c'', e'') :: d ->
+            | APP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
                 let () = Env.add e' x v in
-                aux (c', e', s, Boundary t :: d)
+                aux (c', e', `BTC c :: `ENV e :: s, Frame (c, Env.copy e) :: d)
 
-            | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, Boundary t' :: d ->
+            | APP :: c, e,  v :: `RCL (f, x, c', e', Pass) :: s, d ->
                 let () = Env.add e' x v in
-                aux (c', e', s, Boundary (cap t t') :: d)
+                aux (c', e', `BTC c :: `ENV e :: s, Frame (c, Env.copy e) :: d)
 
             | APP :: c, e,  v :: `CLS (x, c', e', Result t) :: s, d ->
                 let () = Env.add e' x v in
@@ -256,10 +330,16 @@ module Exec1 = struct
                 aux (c', e', `TYP tres :: s, Frame (CAS :: c, e) :: d)
 
             | APP :: c, e,  v :: `CLS (x, c', e', Strict (tres, tdom)) :: s, d ->
-                let () = Env.add e' x v in
                 aux (CAS :: APP :: c, e, 
-                     v :: `TYP tdom :: `CLS (x, c', e', Result tres) :: s, 
-                     Frame (c, e) :: d)
+                     v :: `TYP tdom :: `CLS (x, c', e', Result tres) :: s, d)
+
+            | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, Frame (c'', e'') :: d ->
+                let () = Env.add e' x v in
+                aux (c', e', s, Boundary t :: d)
+
+            | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, Boundary t' :: d ->
+                let () = Env.add e' x v in
+                aux (c', e', s, Boundary (cap t t') :: d)
 
             | TAP :: c, e,  v :: `CLS (x, c', e', Result t) :: s, d ->
                 aux (TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, d)
@@ -304,9 +384,23 @@ module Exec1 = struct
         | `CLS (x,_,_,_) -> Printf.printf "fun %s -> code and env" (Print.pp_var x)
         | `TYP t -> pp_tau t *)
 
-    let wrap_run code debug verbose = 
-        let () = run_params.debug := debug in
-        let () = run_params.verbose := verbose in
+
+    let wrap_run : bytecode -> parameters_structure -> unit = 
+    fun code params ->
+        begin 
+        run_params.debug := !(params.debug);
+        run_params.verbose := !(params.verbose);
+        run_params.step_mode := !(params.step_mode);
+        run_params.monitor := !(params.monitor)
+        end;
         let v = finish (run_init code) in
-        print_string "- " ; print_string @@ show_result v; print_endline ""
+        let () = 
+            print_string "- " ; print_string @@ show_result v; print_endline ""
+        in if !(params.monitor) then
+            begin
+            print_endline "\n===Monitor===\n=============\n";
+            let met = run_params.metrics in
+            Printf.printf "Stack max size: %s\n" (string_of_int @@ max met.stack_sizes);
+            print_endline "\n=============\n============="
+            end
 end

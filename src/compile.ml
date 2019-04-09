@@ -22,7 +22,8 @@ module Bytecode1 = struct
     type byte = 
               | ACC of var
               | CST of b
-              | CLS of rec_flag * var * byte list * interface
+              | CLS of var * byte list * interface
+              | RCL of var * var * byte list * interface
               | APP                     (* app *)
               | TAP                     (* tailapp *)
               | CAS                     (* cast *)
@@ -40,13 +41,13 @@ module Bytecode1 = struct
     let show_interface = function 
     | Pass -> "*"
     | Result t -> 
-        Printf.sprintf "<%s>"
+        Printf.sprintf "R<%s>"
         (pp_tau t)
     | Strict (tres, tdom) ->
-        Printf.sprintf "<%s, %s>" 
+        Printf.sprintf "S<%s, %s>" 
         (pp_tau tres) (pp_tau tdom)
     
-    let rec show_byte = function
+    let rec show_byte verb = function
         | UNI ->   "UNIT"
         | ACC v -> "ACC " ^ (pp_var v)
         | CST b -> "CST " ^ (pp_b b)
@@ -55,11 +56,22 @@ module Bytecode1 = struct
         | TAP ->   "TAILAPP"
         | TCA t -> 
             Printf.sprintf "TAILCAST %s" (pp_tau t)
-        | CLS (frec, v, btc, inter) ->
-            let srec = if frec then "Rec" else "" in
-            Printf.sprintf "%sCLS (%s, %s, %s)" srec
-            (pp_var v) (show_bytecode btc)
-            (show_interface inter)
+        | CLS (v, btc, inter) ->
+            begin match verb with
+            | 0 | 1 -> 
+            Printf.sprintf "CLS (%s,...)" (pp_var v)
+            | _ -> 
+            Printf.sprintf "CLS (%s, %s, %s)"
+            (pp_var v) (show_bytecode verb btc)
+            (show_interface inter) end
+        | RCL (f, v, btc, inter) ->
+            begin match verb with
+            | 0 | 1 -> 
+            Printf.sprintf "CLS_%s (%s,...)" (pp_var f) (pp_var v)
+            | _ -> 
+            Printf.sprintf "CLS_%s (%s, %s, %s)" (pp_var f)
+            (pp_var v) (show_bytecode verb btc)
+            (show_interface inter) end
         | APP ->   "APP"
         | RET ->   "RET"
         | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB"
@@ -69,11 +81,11 @@ module Bytecode1 = struct
         | EQB ->   "EQB"
         | IFZ (btc1, btc2) ->
             Printf.sprintf "IFZ (%s , %s)"
-            (show_bytecode btc1) (show_bytecode btc2)
+            (show_bytecode verb btc1) (show_bytecode verb btc2)
 
-    and show_bytecode btc = 
-        "[" ^ String.concat " ; " 
-        (List.map show_byte btc) ^ "]"
+    and show_bytecode verb btc = 
+        "[ " ^ String.concat " ; " 
+        (List.map (show_byte verb) btc) ^ " ]"
 
     type bytecode = byte list
     (* [@@deriving eq] *)
@@ -87,8 +99,10 @@ module Compile1 = struct
         | Var x ->                [ACC x]
         | Cst c ->                [CST c]
         | App (e1, e2) ->         (compile e1) @ (compile e2) @ [APP]
-        | Lam (t, x, e) ->        [CLS (false, x, (compile e) @ [RET], Strict (t, dom t))]
-        | Lamrec (t, x, e) ->     [CLS (true, x, (compile e) @ [RET], Strict (t, dom t))]
+        | Lam (t, x, e) ->        [CLS (x, (compile e) @ [RET], Strict (t, dom t))]
+        | Lamrec (t, x, e) ->     failwith "lamrec without handle"
+        | Let (f, Lamrec(t, x, e), e2) ->
+                                  [RCL (f, x, (compile e) @ [RET], Strict (t, dom t))] @ [LET f] @ (compile e2) @ [END f]
         | Cast (App (e1, e2), (tau_1,_)) -> 
                                   (compile e1) @ (compile e2) @ [TCA tau_1]
         | Cast (e, (tau_1, _)) -> [TYP tau_1] @ (compile e) @ [CAS]
@@ -103,5 +117,7 @@ module Compile1 = struct
         | Unit ->                 [UNI]
 
     and tail_compile : e -> bytecode = function
-        | _ -> []
+        | App (e1, e2) ->         (compile e1) @ (compile e2) @ [TAP]
+        | Lam (t, x, e) ->        [CLS (x, (compile e), Strict (t, dom t))]
+        | e -> compile e
 end

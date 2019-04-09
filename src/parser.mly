@@ -30,16 +30,17 @@
 %token <string> IDENT
 %token <string> PAT 
 %token EOL ENDEXPR
-%token LET EQ
+%token LET EQ IN
 %token IF THEN ELSE PLUS MINUS 
+
 
 %nonassoc IN IDENT PARCLOSE ELSE FUN
 %nonassoc MOD
 %left PLUS MINUS
-%left TIMES
+%left TIMES 
+%nonassoc PAT PAROPEN LET IF 
+%left SUCC PRED
 
-
-%token IN "IN"
 
 
 /* Starting production. */	
@@ -64,18 +65,18 @@ expr:
 			{ Ifz (c, e1, e2) }
 	| l=let_pattern
 			{ l }	
+	| b=binop  
+			{ b }
 	| PAROPEN e1=expr PARCLOSE e2=expr
 			{ App (e1, e2) }
 	| PAROPEN e=expr PARCLOSE
 			{ e }
+	| e1=expr e2=expr
+			{ App (e1, e2) }
 	| v=IDENT e2=expr 
 			{ App (Var (mk_var v), e2) }
 	| v=var
 			{ Var v }
-	| FUN t=pat x=var fun_delim e=expr   
-			{ Lam (t, x, e) }
-	| FUN x=var fun_delim e=expr
-			{ Lam (qfun (), x, e) }
 	| e=expr MOD t=pat
 			{ Cast (e, (t, dom t)) }
 	| c=pat_const
@@ -84,8 +85,14 @@ expr:
 			{ Pred (e) }
 	| SUCC e=expr
 			{ Succ (e) }
-	| b=binop  
-			{ b }
+	| f=fun_expr
+			{ f }
+
+fun_expr:
+	| FUN t=pat x=var fun_delim e=expr   
+			{ Lam (t, x, e) }
+	| FUN x=var fun_delim e=expr
+			{ Lam (qfun (), x, e) }
 
 binop:
 	| e1=expr TIMES e2=expr 
@@ -111,6 +118,10 @@ let_pattern:
 			{ Let (f, Lamrec (cap t1 t2, x, e1), e2) }
 	| LET REC f=var x=var EQ e1=expr IN e2=expr
 			{ Let (f, Lamrec (qfun (), x, e1), e2) } 
+	| LET REC rf=var EQ f=fun_expr IN e2=expr
+			{ match f with
+			  | Lam (t, x, e) -> Let (rf, Lamrec (t, x, e), e2)
+			  | _ -> failwith "rec used without a function" }
 
 fun_delim : DOT {} | ARROW {}
 

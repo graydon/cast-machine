@@ -56,24 +56,33 @@ let trim_dollar s =
 
 (* Rules. *)
 
+
 let newline         =  ('\010' | '\013' | "\013\010")
 let blank           = [' ' '\009' '\012']
 (* let decimal_literal = '-'? ['0'-'9'] ['0'-'9' '_']* *)
-let ident           = '$'? ['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
+let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
 let struct		 			= ' '* ("->"|"|"|"&"|"\\"|"--"|","|";") ' '*
 (*items: strings, atoms, typevars, intervals *)
 let ppcst						= (['?' '0'-'9' '_']|"--")+			
 (* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
 let ppvar           = '\'' ['?' '0'-'9' 'A'-'Z' 'a'-'b' '_']+
 let ppstr 					= '"' ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']* '"'
-let ppitem					= ppcst|ppvar|ppstr
+let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
+										|"Any"|"Empty"|"Int"|"Byte"
+										|"Arrow"|"Char"|"Atom"|"Pair"
+										|"Record"|"String"|"Latin1"
+										|"Bool"|"Float"|"AnyXml"
+										|"Namespaces"|"Abstract"
+										|"Caml_int"|"In_channel"
+										|"Out_channel"
+
 (*delimiters: parenthesis, brackets, braces *)
 let dopen 					= ['(' '[' '{']
 let dclose 					= [')' ']' '}']
 let ppitems 				= (dopen ' '* ppitem ' '* dclose) | ppitem
-let ppatoms					= dopen ppitems struct ppitems dclose
-										| ppitems struct ppitems | ppitems
-let pat 						= (ppatoms | dopen+ ppatoms dclose+) (struct (dopen* ppatoms dclose*))*
+let ppatoms					= (dopen ppitems struct ppitems dclose)
+										| (ppitems struct ppitems) | ppitems
+let pat 						= (ppatoms | (dopen+ ppatoms dclose*)) (struct (dopen* ppatoms dclose*))*
 let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
 
 rule token = parse

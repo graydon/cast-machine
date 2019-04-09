@@ -4,6 +4,7 @@ let zero = CD.Types.Integer CD.Intervals.V.zero
 let one = CD.Types.Integer (CD.Intervals.V.succ CD.Intervals.V.zero)
 let mult = CD.Intervals.V.mult
 let add = CD.Intervals.V.add
+let sub = CD.Intervals.V.sub
 let var = CD.Types.var
 let any = CD.Types.any
 let empty = CD.Types.empty
@@ -37,13 +38,13 @@ let parse_t str =
     str |> Str.global_substitute (Str.regexp_string "?")
             (fun _ -> " " ^ fresh_dyn_id () ^ " ") 
         |> Stream.of_string |> CD.Parser.pat 
-        |> CD.Typer.typ CD.Typer.empty_env |> CD.Types.descr
+        |> CD.Typer.typ CD.Builtin.env |> CD.Types.descr
     with _ -> raise (Type_Syntax_Error str)
 
 let parse_cst str = 
         try
         str |> Stream.of_string |> CD.Parser.expr
-            |> CD.Typer.type_expr CD.Typer.empty_env |> fst
+            |> CD.Typer.type_expr CD.Builtin.env |> fst
             |> CD.Compile.compile_eval_expr CD.Compile.empty_toplevel
             |> CD.Value.inv_const
         with _ -> raise Expression_Syntax_Error
