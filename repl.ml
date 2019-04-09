@@ -14,7 +14,13 @@ let () = if Array.length (Sys.argv) > 1 then begin
          (if Array.mem "--debug" Sys.argv then params.debug := true);
          (if Array.mem "--verbose" Sys.argv then 
           let i = find Sys.argv "--verbose" 0 in params.verbose := (int_of_string @@ Sys.argv.(i+1)));
-         (if Array.mem "--stepmode" Sys.argv then params.step_mode := true);
+         (if Array.mem "--stepmode" Sys.argv then 
+          begin params.step_mode := true;
+            let i = find Sys.argv "--stepmode" 0 in
+            try let id = int_of_string (Sys.argv.(i+1)) in 
+              params.step_start := id
+            with _ -> ()
+          end);
          (if Array.mem "--monitor" Sys.argv then params.monitor := true) end
 
 let eval_with_parameters params e =

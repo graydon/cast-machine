@@ -58,7 +58,8 @@ module Bytecode1 = struct
             Printf.sprintf "TAILCAST %s" (pp_tau t)
         | CLS (v, btc, inter) ->
             begin match verb with
-            | 0 | 1 -> 
+            | 0 -> "CLS"
+            | 1 -> 
             Printf.sprintf "CLS (%s,...)" (pp_var v)
             | _ -> 
             Printf.sprintf "CLS (%s, %s, %s)"
@@ -66,12 +67,11 @@ module Bytecode1 = struct
             (show_interface inter) end
         | RCL (f, v, btc, inter) ->
             begin match verb with
-            | 0 | 1 -> 
-            Printf.sprintf "CLS_%s (%s,...)" (pp_var f) (pp_var v)
-            | _ -> 
-            Printf.sprintf "CLS_%s (%s, %s, %s)" (pp_var f)
-            (pp_var v) (show_bytecode verb btc)
-            (show_interface inter) end
+            | 0 -> Printf.sprintf "CLS_%s" (pp_var f)
+            | 1 -> Printf.sprintf "CLS_%s (%s,...)" (pp_var f) (pp_var v)
+            | _ -> Printf.sprintf "CLS_%s (%s, %s, %s)" (pp_var f)
+                   (pp_var v) (show_bytecode verb btc)
+                   (show_interface inter) end
         | APP ->   "APP"
         | RET ->   "RET"
         | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB"
@@ -80,8 +80,11 @@ module Bytecode1 = struct
         | END v -> "END " ^ (pp_var v)
         | EQB ->   "EQB"
         | IFZ (btc1, btc2) ->
+            begin match verb with
+            | 0 -> "IFZ"
+            | _ ->
             Printf.sprintf "IFZ (%s , %s)"
-            (show_bytecode verb btc1) (show_bytecode verb btc2)
+            (show_bytecode verb btc1) (show_bytecode verb btc2) end
 
     and show_bytecode verb btc = 
         "[ " ^ String.concat " ; " 
@@ -99,12 +102,8 @@ module Compile1 = struct
         | Var x ->                [ACC x]
         | Cst c ->                [CST c]
         | App (e1, e2) ->         (compile e1) @ (compile e2) @ [APP]
-        | Lam (t, x, e) ->        [CLS (x, (compile e) @ [RET], Strict (t, dom t))]
-        | Lamrec (t, x, e) ->     failwith "lamrec without handle"
-        | Let (f, Lamrec(t, x, e), e2) ->
-                                  [RCL (f, x, (compile e) @ [RET], Strict (t, dom t))] @ [LET f] @ (compile e2) @ [END f]
-        | Cast (App (e1, e2), (tau_1,_)) -> 
-                                  (compile e1) @ (compile e2) @ [TCA tau_1]
+        | Lam (t, x, e) ->        [CLS (x, (tail_compile e), Strict (t, dom t))]
+        | Lamrec (f, t, x, e) ->  [RCL (f, x, (tail_compile e), Strict (t, dom t))]
         | Cast (e, (tau_1, _)) -> [TYP tau_1] @ (compile e) @ [CAS]
         | Succ e ->               (compile e) @ [SUC]
         | Pred e ->               (compile e) @ [PRE]
@@ -117,7 +116,9 @@ module Compile1 = struct
         | Unit ->                 [UNI]
 
     and tail_compile : e -> bytecode = function
-        | App (e1, e2) ->         (compile e1) @ (compile e2) @ [TAP]
-        | Lam (t, x, e) ->        [CLS (x, (compile e), Strict (t, dom t))]
-        | e -> compile e
+        | Cast (App (e1, e2), (tau_1,_)) -> (compile e1) @ (compile e2) @ [TCA tau_1]
+        | Ifz (cond, e1, e2) ->             (compile cond) @ [IFZ (tail_compile e1, tail_compile e2)]
+        | Let (x, a, b) ->                  (compile a) @ [LET x] @ (tail_compile b)
+        | App (e1, e2) ->                   (compile e1) @ (compile e2) @ [TAP]
+        | e ->                              (compile e) @ [RET]
 end

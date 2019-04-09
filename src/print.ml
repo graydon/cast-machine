@@ -58,8 +58,12 @@ module Print = struct
         | Unit -> "()"
         | Var var -> pp_var var
         | Cst b -> pp_b b
-        | Lam (tau, var, e) | Lamrec (tau, var, e)  -> 
-            Printf.sprintf "λ [%s] %s . %s" (pp_tau tau) (pp_var var) (pprint_e e) 
+        | Lam (tau, var, e) ->
+            Printf.sprintf "λ [%s] %s . %s"
+            (pp_tau tau) (pp_var var) (pprint_e e)  
+        | Lamrec (f, tau, var, e)  -> 
+            Printf.sprintf "λ_%s [%s] %s . %s"
+            (pp_var f) (pp_tau tau) (pp_var var) (pprint_e e) 
         | Eq (e1, e2) ->
             Printf.sprintf "%s = %s" (pprint_e e1) (pprint_e e2)
         | Ifz (cond, e1, e2) ->

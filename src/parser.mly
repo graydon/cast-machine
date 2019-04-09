@@ -93,6 +93,17 @@ fun_expr:
 			{ Lam (t, x, e) }
 	| FUN x=var fun_delim e=expr
 			{ Lam (qfun (), x, e) }
+	| FUN xs=id_list fun_delim e=expr
+			{ let rec currify e = function
+				| [] -> e
+				| x :: xs -> Lam (qfun(), x, currify e xs)
+			  in currify e xs }
+
+id_list:
+	| x=var
+		{ [x] }
+	| x=var xs=id_list
+		{ x :: xs }
 
 binop:
 	| e1=expr TIMES e2=expr 
@@ -113,14 +124,14 @@ let_pattern:
 	| LET f=var x=var EQ e1=expr IN e2=expr
 			{ Let (f, Lam (qfun (), x, e1), e2) } 
 	| LET REC f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Lamrec (t, x, e1), e2) }
+			{ Let (f, Lamrec (f, t, x, e1), e2) }
 	| LET REC f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Lamrec (cap t1 t2, x, e1), e2) }
+			{ Let (f, Lamrec (f, cap t1 t2, x, e1), e2) }
 	| LET REC f=var x=var EQ e1=expr IN e2=expr
-			{ Let (f, Lamrec (qfun (), x, e1), e2) } 
-	| LET REC rf=var EQ f=fun_expr IN e2=expr
+			{ Let (f, Lamrec (f, qfun (), x, e1), e2) } 
+	| LET REC idf=var EQ f=fun_expr IN e2=expr
 			{ match f with
-			  | Lam (t, x, e) -> Let (rf, Lamrec (t, x, e), e2)
+			  | Lam (t, x, e) -> Let (idf, Lamrec (idf, t, x, e), e2)
 			  | _ -> failwith "rec used without a function" }
 
 fun_delim : DOT {} | ARROW {}

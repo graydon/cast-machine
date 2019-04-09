@@ -34,6 +34,24 @@ module Exec1 = struct
 
     type stack = stack_value list
 
+    let count_cast : stack -> int =
+        let rec aux acc = function
+        | [] -> acc
+        | `TYP _ :: s -> aux (acc+1) s
+        | _ :: s -> aux acc s
+    in aux 0 
+
+    let longest_proxy : stack -> int = 
+        let rec aux max acc = function
+        | [] -> max
+        | `TYP _ :: s when acc+1 > max -> 
+            aux (acc+1) (acc+1) s
+        | `TYP _ :: s -> 
+            aux max (acc+1) s
+        | _ :: s -> 
+            aux max 0 s
+    in aux 0 0
+
     type dump_item = 
         | Boundary of tau
         | Frame of bytecode * env
@@ -137,8 +155,24 @@ module Exec1 = struct
 
     exception Machine_Stack_Overflow
 
+    module MetricsEnv = Hashtbl.Make(struct 
+        type t = byte
+        let equal a b = match a, b with 
+        | ACC _, ACC _ | CST _, CST _
+        | CLS _, CLS _ | RCL _, RCL _
+        | LET _, LET _ | TYP _, TYP _
+        | END _, END _ | TCA _, TCA _
+        | IFZ _, IFZ _ -> true
+        | _ -> a = b
+        let hash = Hashtbl.hash
+        end)
+
     type metrics = 
-        {mutable stack_sizes : int list}
+        {mutable stack_sizes : (int * int) list;
+         mutable longest_proxies : (int * int) list;
+         mutable casts : (int * int) list;
+         instructions : int MetricsEnv.t;
+         mutable dump_sizes : (int * int) list}
 
     type run_params =
         {run : bool ref;
@@ -148,20 +182,27 @@ module Exec1 = struct
          delim : int ref;
          debug : bool ref;
          step_mode : bool ref;
+         step_start : int ref;
          monitor : bool ref;
          mutable states : state list;
          mutable metrics : metrics}
 
-    let init_metrics = {stack_sizes = []}
+    let init_metrics : metrics = 
+        {stack_sizes = [];  
+         longest_proxies = []; 
+         casts = [];
+         instructions = MetricsEnv.create 20;
+         dump_sizes = []}
 
     let run_params =
         {run = ref true;
          step = ref 0;
-         max_stack = ref 10000;
+         max_stack = ref 100;
          verbose = ref 2;
          delim = ref 2;
          debug = ref true;
          step_mode = ref false;
+         step_start = ref 0;
          monitor = ref false;
          states = [];
          metrics = init_metrics}
@@ -182,7 +223,7 @@ module Exec1 = struct
         then 
         let d = delim !(run_params.delim) stack_size in
         let ssize = string_of_int stack_size in 
-        let strstack = show_stack (firstk 4 s) !(run_params.verbose) in
+        let strstack = show_stack (firstk 20 s) !(run_params.verbose) in
         Printf.printf "Stack[%s]:%s%s\n" ssize d strstack
         else 
          Printf.printf "Stack[%i]\n" (stack_size) 
@@ -214,7 +255,7 @@ module Exec1 = struct
     
     let print_debug_run run_params  = function
         | c, e, s, d -> 
-        Printf.printf "==={%i}========================================================================\n" !(run_params.step); incr (run_params.step);
+        Printf.printf "==={%i}========================================================================\n" !(run_params.step);
         Pervasives.flush stdout; 
         print_debug_code run_params c;
         Pervasives.flush stdout; print_endline "";
@@ -233,20 +274,31 @@ module Exec1 = struct
         fun run_params -> let met = run_params.metrics in
         fun (c, e, s, d) ->
         begin
-        met.stack_sizes <- (List.length s) :: met.stack_sizes;
-        run_params.metrics <- met
+        met.stack_sizes <- (!(run_params.step), (List.length s)) :: met.stack_sizes;
+        met.dump_sizes <- (!(run_params.step), (List.length d)) :: met.dump_sizes;
+        met.longest_proxies <- (!(run_params.step), (longest_proxy s)) :: met.longest_proxies;
+        met.casts <- (!(run_params.step), (count_cast s)) :: met.casts;
+        run_params.metrics <- met;
+        if c != [] then let instr = List.hd c in
+        let cnt_inst =  
+            (try MetricsEnv.find met.instructions instr
+            with Not_found -> 0) in
+        MetricsEnv.replace met.instructions instr (cnt_inst+1)
         end
 
 
     let run code env = 
         let rec aux : state -> state = fun state ->
+        run_params.step := !(run_params.step)+1;
         let () = if !(run_params.monitor) then
         gather_metrics run_params state in
         let () = if !(run_params.debug) then
         print_debug_run run_params state in
         let () = run_check run_params state in
         let ref_state = ref state in
-        let () = if !(run_params.step_mode) then
+        let () = 
+        if !(run_params.step_mode) 
+        && !(run_params.step) >= !(run_params.step_start) then
         begin 
             let cmd = read_line () in 
             begin
@@ -254,7 +306,7 @@ module Exec1 = struct
                 begin
                 ref_state := List.hd run_params.states;
                 run_params.states <- List.tl run_params.states;
-                run_params.step := !(run_params.step)-1
+                run_params.step := !(run_params.step)-2
                 end
             else
                 run_params.states <- state :: run_params.states
@@ -284,6 +336,9 @@ module Exec1 = struct
 
             | RET :: _, _, v :: s, Frame (c', e') :: d ->
                 aux (c', e', v :: s, d)
+
+            | RET :: _, _, v :: s, Boundary t :: Frame (c', e') :: d ->
+                aux (CAS :: c', e', v :: `TYP t :: s, d) 
 
             | SUC :: c, e, `CST (Integer i) :: s, d ->
                 aux (c, e, `CST (Integer (succ i)) :: s, d)
@@ -333,16 +388,17 @@ module Exec1 = struct
                 aux (CAS :: APP :: c, e, 
                      v :: `TYP tdom :: `CLS (x, c', e', Result tres) :: s, d)
 
-            | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, Frame (c'', e'') :: d ->
-                let () = Env.add e' x v in
-                aux (c', e', s, Boundary t :: d)
-
             | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, Boundary t' :: d ->
                 let () = Env.add e' x v in
                 aux (c', e', s, Boundary (cap t t') :: d)
 
+            | TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, d ->
+                let () = Env.add e' x v in
+                aux (c', e', s, Boundary t :: d)
+
             | TAP :: c, e,  v :: `CLS (x, c', e', Result t) :: s, d ->
-                aux (TCA t :: c, e, v :: `CLS (x, c', e', Pass) :: s, d)
+                let tres = apply t (typeof_stack_value v) in
+                aux (TCA tres :: c, e, v :: `CLS (x, c', e', Pass) :: s, d)
 
             | TAP :: c, e,  v :: `CLS (x, c', e', Strict (tres, tdom)) :: s, d ->
                 aux (CAS :: TAP :: c, e, v :: `TYP tdom :: `CLS (x, c', e', Result tres) :: s, d)
@@ -356,6 +412,9 @@ module Exec1 = struct
                 aux (c, e, `CST b :: s, d)
 
             | CAS :: c, e, `CST b :: `TYP t :: s, d ->
+                aux (c, e, `FAIL :: s, d)
+
+            | CAS :: c, e, `FAIL :: `TYP t :: s, d ->
                 aux (c, e, `FAIL :: s, d)
 
             | CAS :: c, e, `CLS (x, c', e', t') :: `TYP t :: s, d ->
@@ -391,7 +450,8 @@ module Exec1 = struct
         run_params.debug := !(params.debug);
         run_params.verbose := !(params.verbose);
         run_params.step_mode := !(params.step_mode);
-        run_params.monitor := !(params.monitor)
+        run_params.monitor := !(params.monitor);
+        run_params.step_start := !(params.step_start)
         end;
         let v = finish (run_init code) in
         let () = 
@@ -400,7 +460,22 @@ module Exec1 = struct
             begin
             print_endline "\n===Monitor===\n=============\n";
             let met = run_params.metrics in
-            Printf.printf "Stack max size: %s\n" (string_of_int @@ max met.stack_sizes);
+            let (step_max, size_max) = max cmp_tuple met.stack_sizes in
+            Printf.printf "Stack max size:               %s at step %s\n" 
+            (string_of_int size_max) (string_of_int step_max);
+            let (step_max, size_max) = max cmp_tuple met.dump_sizes in
+            Printf.printf "Control stack max size:       %s at step %s\n" 
+            (string_of_int size_max) (string_of_int step_max);
+            let (step_max, size_max) = max cmp_tuple met.longest_proxies in
+            Printf.printf "Longest proxy size:           %s at step %s\n" 
+            (string_of_int size_max) (string_of_int step_max);
+            let (step_max, size_max) = max cmp_tuple met.casts in
+            Printf.printf "Largest amount of casts size: %s at step %s\n" 
+            (string_of_int size_max) (string_of_int step_max);
+            let instr_counts = met.instructions in
+            let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in
+            List.iter (fun (by, cnt) ->
+                      printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts;
             print_endline "\n=============\n============="
             end
 end
