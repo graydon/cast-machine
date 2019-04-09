@@ -17,8 +17,28 @@ To build, use the makefile (which is an interface to **dune**):
 ```
 And to run it
 ```
-    make run
+    ./cast.exe --machine --load <some file>
 ```
+Or to try the repl
+```
+    ./cast.exe --machine
+```
+For example, to verify that this machine implements tail call elimination :
+```
+    ./cast.exe --load tests/factorial2.gcl --monitor
+```
+
+The options are:
+```
+    --machine               : use the abstract machine
+    --debug                 : show debugging output
+    --verbose (0|1|2)       : adjust verbosity
+    --stepmode              : step-by-step execution (type b to go back, anything to go forward)
+    --stepmode [integer]    : jump to step <integer> in step-mode
+    --load filename         : load a file (see directory /tests)
+    --monitor               : print monitor output
+```
+  
 
 ## Syntax
 
@@ -26,18 +46,24 @@ And to run it
 e ::=
     | c                                     % CDuce constant
     | x                                     % Variable
-    | \ { tau : tau } x . e                 % Lambda abstractions
-    | fun { tau : tau } x . e
+    | fun ( tau ) x -> e                 % Lambda abstractions
+    | fun x -> e
+    | fun xs -> e
     | e e                                   % Application
     | e % tau                               % Cast
+    | let rec f x = e
+    | let f x = e
+    | let f : tau = e                 
     
 c := any writable CDuce constant (pushing this definition may break the parser in fixable ways...)
 
 x := ['A'-'Z' 'a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
+xs := x list
 
-tau := t | ? (structural gradual types not yet available)
+tau := t | t?
 
 t := any writable CDuce type (cf. above)
+t? := any CDuce type with question marks (gradual type) in it
 ``` 
 
 
