@@ -1,0 +1,7 @@
+let combi : ?->(?->?) = fun f ->
+    (fun ((?->?)->?) x -> (x x)) 
+    (fun ((?->?)->?) x -> 
+        f (fun y -> (x x) y)) in
+let fac : (?->?)->?->? = fun g -> 
+    fun n -> if n then 1 else g (n-1) in
+let fac_rec = combi fac in fac_rec 0;;
