@@ -26,7 +26,6 @@ module Exec1 = struct
         | `BTC of bytecode 
         | `ENV of env
         | `CLS of var * bytecode * env * interface
-        | `RCL of var * var * bytecode * env * interface
         | `TYP of tau
         | `FAIL
         ]
@@ -73,10 +72,10 @@ module Exec1 = struct
         Printf.sprintf "C(%s, %s, %s, %s)"
         (pp_var v) (show_bytecode 2 btc) (show_env 1 true env)
         (show_interface inter)
-    | `RCL (f, v, btc, env, inter) ->
+    (* | `RCL (f, v, btc, env, inter) ->
         Printf.sprintf "C(%s, %s, %s, %s, %s)"
         (pp_var f) (pp_var v) (show_bytecode 2 btc)
-        (show_env 1 true env) (show_interface inter)
+        (show_env 1 true env) (show_interface inter) *)
     | `TYP t -> pp_tau t
     | `FAIL -> "Fail"
 
@@ -91,10 +90,10 @@ module Exec1 = struct
             Printf.sprintf "C(%s, %s, %s, %s)"
             (pp_var v) (show_bytecode 2 btc) 
             (show_env 1 true env) (show_interface inter)
-        | `RCL (f, v, btc, env, inter) ->
+        (* | `RCL (f, v, btc, env, inter) ->
             Printf.sprintf "C(%s, %s, %s, %s, %s)"
             (pp_var f) (pp_var v) (show_bytecode 2 btc) 
-            (show_env 1 true env) (show_interface inter)
+            (show_env 1 true env) (show_interface inter) *)
         | `TYP t -> pp_tau t
         | `FAIL -> "Fail" end
     | 0 -> (fun _ -> "_")
@@ -136,9 +135,9 @@ module Exec1 = struct
     | `CLS (x,_,env,bnd) -> Printf.sprintf "C(%s,...,%s, %s)" 
         (pp_var x) (show_env 0 true env) 
         @@ show_interface bnd
-    | `RCL (f,x,_,env,bnd) -> Printf.sprintf "Cr(%s,%s,...,%s, %s)" 
+    (* | `RCL (f,x,_,env,bnd) -> Printf.sprintf "Cr(%s,%s,...,%s, %s)" 
         (pp_var f) (pp_var x) (show_env 0 true env) 
-        @@ (function |Pass -> "Pass"|Strict _-> "Strict"|Result _->"Result") bnd
+        @@ (function |Pass -> "Pass"|Strict _-> "Strict"|Result _->"Result") bnd *)
     | `TYP t -> pp_tau t
     | `FAIL -> "Fail" 
 
@@ -373,11 +372,7 @@ module Exec1 = struct
 
             | APP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
                 let () = Env.add e' x v in
-                aux (c', e', `BTC c :: `ENV e :: s, Frame (c, Env.copy e) :: d)
-
-            | APP :: c, e,  v :: `RCL (f, x, c', e', Pass) :: s, d ->
-                let () = Env.add e' x v in
-                aux (c', e', `BTC c :: `ENV e :: s, Frame (c, Env.copy e) :: d)
+                aux (c', e', s, Frame (c, e) :: d)
 
             | APP :: c, e,  v :: `CLS (x, c', e', Result t) :: s, d ->
                 let () = Env.add e' x v in
@@ -396,16 +391,23 @@ module Exec1 = struct
                 let () = Env.add e' x v in
                 aux (c', e', s, Boundary t :: d)
 
+            | TCA t :: c, e, v :: `CLS (x, c', e', Result t1) :: s, d ->
+                let tres = apply t1 (typeof_stack_value v) in
+                aux (TCA (cap t tres) :: c, e, v :: `CLS (x, c', e', Pass) :: s, d)
+
+            | TCA t :: c, e, v :: `CLS (x, c', e', Strict (t1, t2)) :: s, d ->
+                aux (CAS :: TCA t :: c, e, v :: `TYP t2 :: `CLS (x, c', e', Result t1) :: s, d)
+
+            | TAP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
+                let () = Env.add e' x v in
+                aux (c', e', `BTC c :: `ENV e :: s, d)
+
             | TAP :: c, e,  v :: `CLS (x, c', e', Result t) :: s, d ->
                 let tres = apply t (typeof_stack_value v) in
                 aux (TCA tres :: c, e, v :: `CLS (x, c', e', Pass) :: s, d)
 
             | TAP :: c, e,  v :: `CLS (x, c', e', Strict (tres, tdom)) :: s, d ->
                 aux (CAS :: TAP :: c, e, v :: `TYP tdom :: `CLS (x, c', e', Result tres) :: s, d)
-
-            | TAP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
-                let () = Env.add e' x v in
-                aux (c', e', `BTC c :: `ENV e :: s, d)
 
             | CAS :: c, e, `CST b :: `TYP t :: s, d 
                 when subtype (constant b) (ceil t) ->

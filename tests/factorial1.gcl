@@ -1,1 +1,2 @@
-let rec f x = if x then 1 else x * (f (x-1)) in f 10;;
+let rec f x = if x then 1 else x * (f (x-1)) 
+in f 10;;

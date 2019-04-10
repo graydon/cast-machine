@@ -82,7 +82,7 @@ let dclose 					= [')' ']' '}']
 let ppitems 				= (dopen ' '* ppitem ' '* dclose) | ppitem
 let ppatoms					= (dopen ppitems struct ppitems dclose)
 										| (ppitems struct ppitems) | ppitems
-let pat 						= (ppatoms | (dopen+ ppatoms dclose*)) (struct (dopen* ppatoms dclose*))*
+let pat 						= ppatoms | (ppatoms | (dopen+ ppatoms dclose+)) (struct (dopen* ppatoms dclose*))+
 let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
 
 rule token = parse
