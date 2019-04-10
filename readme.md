@@ -7,8 +7,8 @@ Working on `ocaml 4.07.0`.
 Main dependencies: 
 - **opam**
 - **utop**
-- **dune** - working with version 1.8.2
-- **cduce** version 1.0 - installed using the **setvariants** branch of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce) (`make install` puts cduce_lib inside `~/.opam/4.07.0/cduce/` which is then picked up by **ocamlfind** and then **dune**)
+- **dune**
+- **cduce** version 1.0, either the **cduce-next** or the **setvariants** branches of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce) work fine. It should be installed some place where ocamlfind can pick it up. From a clone of the repo, `make install` puts cduce_lib inside `~/.opam/<switch-name>/cduce/` which is in dune's path.
 - **menhir**
 
 To build, use the makefile (which is an interface to **dune**):
@@ -23,7 +23,7 @@ Or to try the repl
 ```
     ./cast.exe --machine
 ```
-For example, to verify that this machine implements tail call elimination :
+To check on tail call elimination :
 ```
     ./cast.exe --load tests/factorial2.gcl --monitor
 ```
