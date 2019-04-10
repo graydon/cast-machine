@@ -67,7 +67,7 @@ t? := any CDuce type with question marks (gradual type) in it
 ``` 
 
 
-To be clear: &lambda;<sup>&tau</sup> x . e is written as `\ tau x . e` or `fun tau x -> e`.
+To be clear: &lambda;<sup>&tau;</sup> x . e is written as `\ tau x . e` or `fun tau x -> e`.
 
 
 ## Compilation issue
