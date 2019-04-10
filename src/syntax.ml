@@ -2,7 +2,7 @@
 include Types
 open Primitives
 
-module type Dynamic_Type = sig
+module type Gradual_Type = sig
     type var = Types.var
     type b = Types.b
     type t = Types.t (* static type *)
@@ -11,9 +11,10 @@ module type Dynamic_Type = sig
     val subst : t -> (var * t) list -> t
     val ceil : tau -> t
     val floor : tau -> t
+    val apply : tau -> tau -> tau
 end
 
-module CDuce_Dynamic_Types : Dynamic_Type = struct
+module CDuce_Gradual_Types : Gradual_Type = struct
     type t = Types.t
     type var = Types.var
     (* type varset = Types.varset *)
@@ -30,7 +31,36 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
     manière distincte (avec des [fresh_var ()]) *)
     type tau = t
 
+
     let subst = CD.Types.Subst.full_list
+    
+    let refresh_grad t =
+      let _, _, _, all = collect_vars t in
+      subst t
+          (List.map 
+            (fun v -> (v, qmark()))
+            (CD.Var.Set.get 
+              (CD.Var.Set.filter (fun v ->
+                (CD.Var.ident v).[0] = 'd') all)))
+
+    let subst_grad t trep = 
+      let _, _, _, all = collect_vars t in
+      subst t
+        (List.map 
+          (fun v -> (v, trep))
+          (CD.Var.Set.get 
+            (CD.Var.Set.filter (fun v ->
+              (CD.Var.ident v).[0] = 'd') all)))
+
+    let apply tapp targ = 
+      let qm = qmark () in
+      let tapp' = subst_grad tapp qm in 
+      let targ' = subst_grad targ qm in
+      let tres = app tapp' targ' in
+      refresh_grad tres
+
+
+
     (* let subst_single = CD.Types.Subst.single *)
     (* let variance = CD.Types.Variable.variance *)
     (* let pp_type = CD.Types.Print.pp_type *)
@@ -42,7 +72,7 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
     let ceil t =
       let _, pos, neg, _ = collect_vars t in
       (* check if the first letter of the ident 
-      is 'd', because then it is a dynamic typevar *)
+      is 'd', because then it is  gradual typevar *)
       let t' = 
       subst t 
         (List.map 
@@ -61,7 +91,7 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
     let floor t =
       let _, pos, neg, _ = collect_vars t in
       (* check if the first letter of the ident 
-      is 'd', because then it is a dynamic typevar *)
+      is 'd', because then it is a gradual typevar *)
       let t' = 
       subst t 
         (List.map 
@@ -76,10 +106,12 @@ module CDuce_Dynamic_Types : Dynamic_Type = struct
           (CD.Var.Set.get 
             (CD.Var.Set.filter (fun v ->
               (CD.Var.ident v).[0] = 'd') pos)))
+
+    
 end
 
 module type Cast_Expr = sig
-    include Dynamic_Type
+    include Gradual_Type
     type p (* blame labels *)
     type alpha_vector
     type t_vector
@@ -105,7 +137,7 @@ module type Cast_Expr = sig
 		| Eol
 end
 
-module Make_SE (Init_Type : Dynamic_Type) : (Cast_Expr 
+module Make_SE (Init_Type : Gradual_Type) : (Cast_Expr 
   with type castkind := Init_Type.tau * Init_Type.tau) = 
 struct
     include Init_Type
@@ -142,11 +174,11 @@ struct
 		| Eol
 end
 
-module SE_CDuce = Make_SE(CDuce_Dynamic_Types)
+module SE_CDuce = Make_SE(CDuce_Gradual_Types)
 
 module SE_CDuce_Symbolic =
 struct
-    include CDuce_Dynamic_Types
+    include CDuce_Gradual_Types
     type alpha_vector = var list
     type t_vector = t list
     type p =    (* blame label *)

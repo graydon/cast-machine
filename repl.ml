@@ -8,24 +8,25 @@ open Lexing
 open Utils
 
 let () = if Array.length (Sys.argv) > 1 then begin
-         (if Array.mem "--machine" Sys.argv then params.machine := "machine mode");
-         (if Array.mem "--symbolic" Sys.argv then params.symbolic := "symbolic");
-         (if Array.mem "--load" Sys.argv then params.load_file := true);
-         (if Array.mem "--debug" Sys.argv then params.debug := true);
-         (if Array.mem "--verbose" Sys.argv then 
-          let i = find Sys.argv "--verbose" 0 in params.verbose := (int_of_string @@ Sys.argv.(i+1)));
-         (if Array.mem "--stepmode" Sys.argv then 
-          begin params.step_mode := true;
-            let i = find Sys.argv "--stepmode" 0 in
-            try let id = int_of_string (Sys.argv.(i+1)) in 
-              params.step_start := id
-            with _ -> ()
-          end);
-         (if Array.mem "--monitor" Sys.argv then params.monitor := true) end
+      (if Array.mem "--interpreter" Sys.argv then params.machine := "");
+      (if Array.mem "--machine" Sys.argv then params.machine := "machine");
+      (if Array.mem "--symbolic" Sys.argv then params.symbolic := "symbolic");
+      (if Array.mem "--load" Sys.argv then params.load_file := true);
+      (if Array.mem "--debug" Sys.argv then params.debug := true);
+      (if Array.mem "--verbose" Sys.argv then 
+      let i = find Sys.argv "--verbose" 0 in params.verbose := (int_of_string @@ Sys.argv.(i+1)));
+      (if Array.mem "--stepmode" Sys.argv then 
+      begin params.step_mode := true;
+        let i = find Sys.argv "--stepmode" 0 in
+        try let id = int_of_string (Sys.argv.(i+1)) in 
+          params.step_start := id
+        with _ -> ()
+      end);
+      (if Array.mem "--monitor" Sys.argv then params.monitor := true) end
 
 let eval_with_parameters params e =
   let () = if !(params.debug) 
-    then (print_string "Program: "; print_e e; print_endline "") in
+  then (print_string "Program: "; print_e e; print_endline "") in
   if !(params.machine) = "" then wrap_eval e
   else
       let () = if !(params.debug) then print_endline "Compiling.." in

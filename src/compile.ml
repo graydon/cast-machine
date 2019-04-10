@@ -102,8 +102,8 @@ module Compile1 = struct
         | Var x ->                [ACC x]
         | Cst c ->                [CST c]
         | App (e1, e2) ->         (compile e1) @ (compile e2) @ [APP]
-        | Lam (t, x, e) ->        [CLS (x, (tail_compile e), Strict (t, dom t))]
-        | Lamrec (f, t, x, e) ->  [RCL (f, x, (tail_compile e), Strict (t, dom t))]
+        | Lam (t, x, e) ->        [CLS (x, (tail_compile e), Result t)]
+        | Lamrec (f, t, x, e) ->  [RCL (f, x, (tail_compile e), Result t)]
         | Cast (e, (tau_1, _)) -> [TYP tau_1] @ (compile e) @ [CAS]
         | Succ e ->               (compile e) @ [SUC]
         | Pred e ->               (compile e) @ [PRE]
@@ -114,6 +114,7 @@ module Compile1 = struct
         | Ifz (cond, e1, e2) ->   (compile cond) @ [IFZ (compile e1, compile e2)]
         | Eq (e1, e2) ->          (compile e1) @ (compile e2) @ [EQB]
         | Unit ->                 [UNI]
+        
 
     and tail_compile : e -> bytecode = function
         | Cast (App (e1, e2), (tau_1,_)) -> (compile e1) @ (compile e2) @ [TCA tau_1]

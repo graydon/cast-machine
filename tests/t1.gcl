@@ -1,6 +1,9 @@
+(* ici, succ est un builtin pour le successeur, 
+   et suc est le successeur des entiers de Church *)
 let zero = fun f -> fun x -> x in
-let succ = fun n ->
+let suc = fun n ->
            fun f -> 
            fun x -> f ((n f) x) in
-let one = succ zero in 
-    one (fun x -> x) 0;;
+let deux = suc (suc zero) in 
+let id = fun x -> succ x in
+    deux id 0;;

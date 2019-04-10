@@ -11,6 +11,9 @@
 		let tp = List.tl rp in 
 		let t = parse_t (String.concat " " (List.rev tp)) 
 		in (t, mk_var vp)
+
+	let arr_t = parse_t "Arrow"
+	let any_arr = parse_t "Any -> Any"
 %}
 
 /* Token declarations. */
@@ -33,12 +36,13 @@
 %token LET EQ IN
 %token IF THEN ELSE PLUS MINUS 
 
-
-%nonassoc IN IDENT PARCLOSE ELSE FUN
-%nonassoc MOD
-%left PLUS MINUS
+%left LET IN
+%left PLUS MINUS 
 %left TIMES 
-%nonassoc PAT PAROPEN LET IF 
+%left IDENT
+%nonassoc PARCLOSE ELSE FUN
+%nonassoc MOD
+%nonassoc PAT PAROPEN IF 
 %left SUCC PRED
 
 
@@ -61,42 +65,48 @@ prog:
 		{ Expr e }
 
 expr:
+	| e=app_expr
+			{ e }
 	| IF c=cond THEN e1=expr ELSE e2=expr
 			{ Ifz (c, e1, e2) }
-	| l=let_pattern
-			{ l }	
-	| b=binop  
-			{ b }
 	| PAROPEN e1=expr PARCLOSE e2=expr
 			{ App (e1, e2) }
 	| PAROPEN e=expr PARCLOSE
 			{ e }
-	| e1=expr e2=expr
-			{ App (e1, e2) }
-	| v=IDENT e2=expr 
-			{ App (Var (mk_var v), e2) }
-	| v=var
-			{ Var v }
-	| e=expr MOD t=pat
-			{ Cast (e, (t, dom t)) }
-	| c=pat_const
-			{ Cst c }
 	| PRED e=expr 
 			{ Pred (e) }
 	| SUCC e=expr
 			{ Succ (e) }
 	| f=fun_expr
 			{ f }
+	| e=expr MOD t=pat
+			{ Cast (e, (t, dom t)) }
+	| b=binop  
+			{ b }
+	| l=let_pattern
+			{ l }	
+
+app_expr:
+	| e=a_expr 
+		{ e }
+	| e1=app_expr e2=a_expr
+		{ App (e1, e2) }
+
+a_expr:
+	| PAROPEN e=expr PARCLOSE 
+		{ e }
+	| v=var
+			{ Var v }
+	| c=pat_const
+			{ Cst c }
 
 fun_expr:
 	| FUN t=pat x=var fun_delim e=expr   
 			{ Lam (t, x, e) }
-	| FUN x=var fun_delim e=expr
-			{ Lam (qfun (), x, e) }
 	| FUN xs=id_list fun_delim e=expr
 			{ let rec currify e = function
 				| [] -> e
-				| x :: xs -> Lam (qfun(), x, currify e xs)
+				| x :: xs -> Lam (qfun (), x, currify e xs)
 			  in currify e xs }
 
 id_list:

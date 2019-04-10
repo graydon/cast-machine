@@ -1,5 +1,6 @@
+let x = 1000 in
 let rec fac : Int -> Int -> Int = fun acc ->
     fun (Int -> Int) n ->
         if n then acc
         else ((fac (n*acc)) (n-1)) % Int
-in (fac (1 % ?)) 200;;
+in (fac (1 % ?)) x;;

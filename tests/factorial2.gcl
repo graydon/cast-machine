@@ -2,5 +2,5 @@ let rec fac =
     fun (Int -> (Int -> Int)) acc ->
     fun (Int -> Int) n ->
         if n then acc
-        else ((fac (n*acc)) (n-1)) % Int
-in (fac 1) 1000;;
+        else (fac (n*acc)) (n-1)
+in fac 1 200;;
