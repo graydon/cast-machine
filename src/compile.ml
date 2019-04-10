@@ -2,7 +2,7 @@ open Syntax
 open Print
 open Primitives
 
-module Bytecode1 = struct
+module Bytecode_Eval_Apply = struct
     include SE_CDuce
 
     type interface = 
@@ -95,8 +95,8 @@ module Bytecode1 = struct
 
 end
 
-module Compile1 = struct
-    open Bytecode1
+module Compile_Eval_Apply = struct
+    open Bytecode_Eval_Apply
 
     let rec compile : e -> bytecode = function
         | Var x ->                [ACC x]

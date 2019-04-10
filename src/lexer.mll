@@ -66,7 +66,7 @@ let struct		 			= ' '* ("->"|"|"|"&"|"\\"|"--"|","|";") ' '*
 let ppcst						= (['?' '0'-'9' '_']|"--")+			
 (* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
 let ppvar           = '\'' ['?' '0'-'9' 'A'-'Z' 'a'-'b' '_']+
-let ppstr 					= '"' ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']* '"'
+let ppstr 					= '"' ("\t" | "\n" | ['=' '-' '>' '<' '+' 'A'-'Z' 'a'-'z' ' ' '0'-'9' '\'' '_'])* '"'
 let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Any"|"Empty"|"Int"|"Byte"
 										|"Arrow"|"Char"|"Atom"|"Pair"

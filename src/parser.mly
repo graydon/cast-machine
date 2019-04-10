@@ -36,11 +36,11 @@
 %token LET EQ IN
 %token IF THEN ELSE PLUS MINUS 
 
-%left LET IN
+%left IN
 %left PLUS MINUS 
-%left TIMES 
 %left IDENT
 %nonassoc PARCLOSE ELSE FUN
+%left TIMES 
 %nonassoc MOD
 %nonassoc PAT PAROPEN IF 
 %left SUCC PRED

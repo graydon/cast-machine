@@ -1,4 +1,4 @@
-let x = 1000 in
+let x = 500 in
 let rec fac : Int -> Int -> Int = fun acc ->
     fun (Int -> Int) n ->
         if n then acc

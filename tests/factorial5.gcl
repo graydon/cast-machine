@@ -1,5 +1,5 @@
 (* non permis par le parser actuallement *)
-let rec fac : Int -> Int -> Int = fun acc n ->
+(* let rec fac : Int -> Int -> Int = fun acc n ->
     if n then acc
     else ((fac (n*acc)) (n-1)) % Int
-in (fac 1) 1000;;
+in (fac 1) 1000;; *)

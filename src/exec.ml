@@ -7,9 +7,9 @@ open Primitives
 open Print
 open Utils
 
-module Exec1 = struct
-    include Compile1
-    open Bytecode1
+module Exec_Eval_Apply = struct
+    include Compile_Eval_Apply
+    open Bytecode_Eval_Apply
 
     module Env = Hashtbl.Make(struct 
         type t = var
@@ -22,9 +22,7 @@ module Exec1 = struct
         | `Fail ]
 
     type stack_value = 
-        [ `CST of b 
-        | `BTC of bytecode 
-        | `ENV of env
+        [ `CST of b
         | `CLS of var * bytecode * env * interface
         | `TYP of tau
         | `FAIL
@@ -66,8 +64,8 @@ module Exec1 = struct
 
     let rec show_stack_value : stack_value -> string = function
     | `CST b -> pp_b b
-    | `BTC btc -> show_bytecode 2 btc
-    | `ENV env -> show_env 1 true env
+    (* | `BTC btc -> show_bytecode 2 btc *)
+    (* | `ENV env -> show_env 1 true env *)
     | `CLS (v, btc, env, inter) -> 
         Printf.sprintf "C(%s, %s, %s, %s)"
         (pp_var v) (show_bytecode 2 btc) (show_env 1 true env)
@@ -84,8 +82,8 @@ module Exec1 = struct
     | 2 ->
         begin function
         | `CST b -> pp_b b
-        | `BTC btc -> show_bytecode 2 btc
-        | `ENV env -> "{ nonempty env }"
+        (* | `BTC btc -> show_bytecode 2 btc *)
+        (* | `ENV env -> "{ nonempty env }" *)
         | `CLS (v, btc, env, inter) -> 
             Printf.sprintf "C(%s, %s, %s, %s)"
             (pp_var v) (show_bytecode 2 btc) 
@@ -130,8 +128,8 @@ module Exec1 = struct
 
     and show_stack_value_1 : stack_value -> string = function
     | `CST b -> pp_b b
-    | `BTC _ -> "[code]"
-    | `ENV _ -> "{env}"
+    (* | `BTC _ -> "[code]" *)
+    (* | `ENV _ -> "{env}" *)
     | `CLS (x,_,env,bnd) -> Printf.sprintf "C(%s,...,%s, %s)" 
         (pp_var x) (show_env 0 true env) 
         @@ show_interface bnd
@@ -196,7 +194,7 @@ module Exec1 = struct
     let run_params =
         {run = ref true;
          step = ref 0;
-         max_stack = ref 100;
+         max_stack = ref 500;
          verbose = ref 2;
          delim = ref 2;
          debug = ref true;
@@ -364,10 +362,7 @@ module Exec1 = struct
 
             (* new instructions for casts *)
 
-            | (TAP|APP) :: c, e,  `FAIL :: _ :: s, d -> 
-                aux (c, e, `FAIL :: s, d)
-            
-            | (TAP|APP) :: c, e, _ :: `FAIL :: s, d -> 
+            | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
                 aux (c, e, `FAIL :: s, d)
 
             | APP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
@@ -400,7 +395,7 @@ module Exec1 = struct
 
             | TAP :: c, e,  v :: `CLS (x, c', e', Pass) :: s, d ->
                 let () = Env.add e' x v in
-                aux (c', e', `BTC c :: `ENV e :: s, d)
+                aux (c', e', s, d)
 
             | TAP :: c, e,  v :: `CLS (x, c', e', Result t) :: s, d ->
                 let tres = apply t (typeof_stack_value v) in
