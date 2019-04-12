@@ -75,7 +75,6 @@ let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Namespaces"|"Abstract"
 										|"Caml_int"|"In_channel"
 										|"Out_channel"
-
 (*delimiters: parenthesis, brackets, braces *)
 let dopen 					= ['(' '[' '{']
 let dclose 					= [')' ']' '}']
@@ -90,6 +89,7 @@ rule token = parse
   | blank +         { token lexbuf }
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
+	| "()"						{ UNIT }
 	| "->"						{ ARROW }
 	| '*'							{ TIMES }
 	| '+'							{ PLUS }
@@ -102,7 +102,7 @@ rule token = parse
 	| '\\' 						{ FUN }
   | ";;"				    { ENDEXPR }
   | ident as id     { filter_id id }
-	| pat as t     		{  PAT t }
+	| pat as t     		{ PAT t }
 	| eof 						{ EOL }
 	| _ 							{ print_endline @@ "lex failure: " ^ (Lexing.lexeme lexbuf); failwith "Lexing error" }
 

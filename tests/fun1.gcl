@@ -1,0 +1,1 @@
+let f : Int -> Int = fun x -> x in (f % (Int->Int));;

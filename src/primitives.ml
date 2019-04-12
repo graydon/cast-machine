@@ -61,6 +61,10 @@ let parse_cst str =
 
 let split = Str.split (Str.regexp " +")
 
+(* some types *)
+let arr_t = parse_t "Arrow"
+let narr_t = neg (arr_t)
+
 let x = List.mem
 
 let process_funpat f =

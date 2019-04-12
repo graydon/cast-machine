@@ -18,6 +18,7 @@
 
 /* Token declarations. */
 
+%token UNIT
 %token DOT COLON
 %token PAROPEN PARCLOSE
 %token MOD FUN ARROW REC TIMES PRED SUCC
@@ -84,7 +85,9 @@ expr:
 	| b=binop  
 			{ b }
 	| l=let_pattern
-			{ l }	
+			{ l }
+	| UNIT 
+			{ Unit }	
 
 app_expr:
 	| e=a_expr 
@@ -112,8 +115,20 @@ fun_expr:
 id_list:
 	| x=var
 		{ [x] }
-	| x=var xs=id_list
+	| x=var xs=id_unit_list
 		{ x :: xs }
+
+var_or_unit:
+	| UNIT
+		{ mk_var "_" }
+	| x=var 
+		{ x }
+
+id_unit_list:
+	| vu=var_or_unit
+		{ [vu] }
+	| vu=var_or_unit ids=id_unit_list
+		{ vu :: ids }
 
 binop:
 	| e1=expr TIMES e2=expr 

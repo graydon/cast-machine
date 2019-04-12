@@ -2,6 +2,80 @@
 (* init closures with a mark * *)
 (* note : Beppe sait comment avoir les types intersections *)
 
+(* 
+Should add a static type to closures
+*)
+
+(*
+Maybe:
+Add a failure case to rule 19 (casting a function to type ? should fail)
+Or if 
+*)
+
+(*
+Add an "undefined" type (if dom is not defined because tau is not a function type)
+*)
+
+(*
+Maybe: The dom of ? should be Any (or ? according to Victor, but it's equivalent)
+Any est plus compact car ca enleve les intersections.
+*)
+
+(*
+End the execution when Omega arrives.
+Have two end configuration : computation done / program failed 
+Maybe : 
+*)
+
+(*
+Rmk: on ne peut pas fail au cours d'un tailcast app meme si le type est empty,
+parce que la fonction pourrait ne pas terminer et c'est ce qui est voulu.
+(Arrow = Empty -> Any c'est les fonctions qui divergent)
+*)
+
+(*
+Quelle est la bonne configuration des closure?
+[x, code, env, kappa, tau]
+*)
+
+(*
+Ajouter du symbolique : garder les intersection (cheap)
+mais essayer de rendre symboliques les domaines et apply.
+Du coup, modifier la règle (9) pour evaluer tau et le mettre
+sur TCA tau 
+*)
+
+(*
+Pour le typecase : il faudrait pouvoir adapter le systeme de cast
+efficace de cduce et voir s'il est possible, a partir d'un cast general,
+d'obtenir une expression castee par un type graduel.
+
+Example, pour e : int list, si e a comme type statique 'a list, 
+on obtiendrait, hd e : int
+*)
+
+(*
+Deux possibilites : 
+- prouver des choses
+    que l'abstract machine preserve la semantique, 
+    donc qu'on peut ignorer le typage
+
+- faire la machine avec le calcul symbolique
+    la solution, c'est de faire l'eval pour tailappcast
+    repondre a la question qu'est-ce qu'on y gagne
+
+- faire du benchmark
+*)
+
+(*
+Rajouter le polymorphisme ?
+pas complique, mais rajouter comme value les 
+    /\ c % tau
+(il faut attendre l'instanciation de /\, car on pourrait
+avoir /\ c % 'a et obtenir differents resultats)
+    /\ c % tau
+*)
+
 open Compile
 open Primitives
 open Print
@@ -345,6 +419,10 @@ module Exec_Eval_Apply = struct
 
             | MUL :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                 aux (c, e, `CST (Integer (mult i1 i2)) :: s, d)
+
+            (* | EQB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
+                let ieq = if i1 = i2 then (Integer (zero)) else (Integer (succ zero)) in
+                aux (c, e, `CST ieq :: s, d) *)
 
             | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                 aux (c, e, `CST (Integer (add i1 i2)) :: s, d) 

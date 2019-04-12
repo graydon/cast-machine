@@ -8,10 +8,7 @@ default: build
 CDUCE_LIB_DIR="`ocamlfind query cduce`"
 
 build:
-	if [ ! -d "$(CDUCE_LIB_DIR)/+camlp4" ]; then\
-		mkdir "$(CDUCE_LIB_DIR)/+camlp4";\
-		ln -s "$(CDUCE_LIB_DIR)/../ocaml/camlp4/camlp4lib.cma" "$(CDUCE_LIB_DIR)/+camlp4";\
-	fi
+	@echo "If this fails due to camlp4lib, try 'make fix_linking' as root"
 	dune build repl.exe $(FLAGS)
 	rm -f cast.exe
 	echo "#! /bin/sh" >> cast.exe
@@ -20,6 +17,9 @@ build:
 	chmod +x cast.exe
 	@echo ""
 	@echo "Build finished. You can now start ./cast.exe"
+
+fix_linking:
+	ln -fs "$(CDUCE_LIB_DIR)/../ocaml/camlp4" "$(CDUCE_LIB_DIR)/+camlp4";\
 
 debug:
 	dune build repl.exe $(FLAGS) --debug-backtraces
