@@ -1,12 +1,16 @@
 (* Interpreter written using big step semantics *)
 open Primitives
+open Types
+open Print
 open Syntax
+
 
 (* Working interpreter - this is the more eager version
 of the space-efficient semantics *)
 module Eager_Calculus = struct
-    include SE_CDuce
-    open Print.Print
+    include Eager
+    include Eager.Print
+   
 
     module Env = Map.Make(struct 
             type t = var
@@ -17,6 +21,7 @@ module Eager_Calculus = struct
     type v = 
         [ | `Cst of b 
         | `Closure of (tau * var * e) * twosome * env
+        | `RClosure of var * (tau * var * e) * twosome * env
         | `Fail
         ]
     and env = v Env.t
@@ -24,7 +29,9 @@ module Eager_Calculus = struct
     let print_v : v -> unit = function
         | `Fail -> print_string "Fail"
         | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
+        | `RClosure (_, (t,x,e),_,_)
         | `Closure ((t, x, e), _, _) -> print_e (Lam (t, x, e))
+
 
 
     let inter ts (t1,t2) = match ts with
@@ -32,6 +39,7 @@ module Eager_Calculus = struct
         
     let typeof : v -> t = function
         | `Cst b -> constant b
+        | `RClosure (_, _,(t1', t2', _), _)
         | `Closure (_, (t1', t2', _), _) -> 
             arrow (cons t1') (cons t2')
         | `Fail -> failwith "error: type of `Fail"
@@ -68,6 +76,8 @@ module Eager_Calculus = struct
                 aux env' e2
         | Lam (tau, x, e) -> 
             `Closure ((tau, x, e), (tau, dom tau, T), Env.empty)
+        | Lamrec (f, tau, x, e) ->
+            `RClosure (f, (tau, x, e), (tau, dom tau, T), Env.empty)
         | Ifz (cond, e1, e2) ->
             let v = aux env cond in 
             if v = `Cst zero then aux env e1
@@ -77,17 +87,43 @@ module Eager_Calculus = struct
             let v2 = aux env e2 in 
             if v1 = v2 then `Cst zero
             else `Cst one
+        | Plus (e1, e2) ->
+            let v1 = aux env e1 in
+            let v2 = aux env e2 in 
+            begin match v1, v2 with 
+            | `Cst (Integer i1), `Cst (Integer i2) -> `Cst (Integer (add i1 i2))
+            | _ -> failwith "trying to add non-integers"
+            end
+        | Mult (e1, e2) ->
+            let v1 = aux env e1 in
+            let v2 = aux env e2 in 
+            begin match v1, v2 with 
+            | `Cst (Integer i1), `Cst (Integer i2) -> `Cst (Integer (mult i1 i2))
+            | _ -> failwith "trying to multiply non-integers"
+            end
+        | Minus (e1, e2) ->
+            let v1 = aux env e1 in
+            let v2 = aux env e2 in 
+            begin match v1, v2 with 
+            | `Cst (Integer i1), `Cst (Integer i2) -> `Cst (Integer (sub i1 i2))
+            | _ -> failwith "trying to substract non-integers"
+            end
         | Cast (e, (tau1, tau2)) -> 
             begin match (aux env e) with
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
             | `Closure (e', tau, env') ->
                 `Closure (e', inter tau (tau1, tau2), env') 
+            | `RClosure (f,e', tau, env') ->
+                `RClosure (f,e',inter tau (tau1, tau2), env') 
             | `Fail -> `Fail end
         | App (e1, e2) ->
             exec_info.inline := true;
-            begin match (aux env e1) with
+            let rec enter_closure : v -> v = function
             | `Cst _ -> failwith "error: trying to apply a constant"
             | `Fail -> `Fail
+            | `RClosure (f, a1, a2, env) as rcls ->
+                let env' = Env.add f rcls env in
+                enter_closure (`Closure (a1, a2, env'))
             | `Closure (((_, x, e') , (tau1, tau2, _), env')) -> 
                 let v = aux env e2 in
                 let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
@@ -108,9 +144,13 @@ module Eager_Calculus = struct
                 | `Closure (fe'', tau', _) ->
                     let tapp = apply tau1 (typeof v) in
                     `Closure (fe'', inter tau' (tapp, dom tapp), env'')
+                | `RClosure (f, fe'', tau', _) ->
+                    let tapp = apply tau1 (typeof v) in
+                    `RClosure (f, fe'', inter tau' (tapp, dom tapp), env'')
                 | `Fail -> `Fail (* trying to apply `Fail as a function *)
                 end
-            end
+            in enter_closure (aux env e1)
+        
         in aux Env.empty e 
         
     let wrap_eval e =
@@ -125,8 +165,8 @@ end
 
 (* Symbolic version (todo) *)
 module Symbolic_Calculus = struct
-    include SE_CDuce_Symbolic
-    open Print.Print_Symbolic
+    include Symbolic
+    open Symbolic.Print
 
     module Env = Map.Make(
             struct 

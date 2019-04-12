@@ -1,7 +1,7 @@
 open Cast
-open Print.Print
 open Interpreter.Eager_Calculus
 open Exec.Exec_Eval_Apply
+open Compile.Compile_Eval_Apply
 open Primitives
 open Errors
 open Lexing
@@ -57,10 +57,10 @@ let rec repl () =
 let parse_buf_exn lexbuf params =
   try
     Parser.prog Lexer.token lexbuf
-  with exn ->
+  with _ ->
     begin
       let tok = Lexing.lexeme lexbuf in
-      raise (send_parsing_error (Lexing.lexeme_start_p lexbuf) tok)
+      raise (send_parsing_error (Lexing.lexeme_start_p lexbuf) ((!(params.machine)) ^ tok))
     end
 
 (* extract a line from a lexbuf . Load file when necessary *)

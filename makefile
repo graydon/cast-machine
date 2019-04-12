@@ -1,7 +1,7 @@
 # Frontend to dune.
 
 .PHONY: default build install uninstall test clean
-FLAGS=--profile release
+FLAGS=
 
 default: build
 

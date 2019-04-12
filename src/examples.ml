@@ -7,9 +7,8 @@ module CD = Cduce_lib
 
 
 module Eager_Examples = struct
-    open Syntax.SE_CDuce
+    open Syntax.Eager
     open Eager_Calculus
-    open Print.Print
 
     open CD.Intervals.V
     (* Using CD.Intervals.V.zero etc. *)
@@ -137,7 +136,7 @@ module Eager_Examples = struct
 end
 
 module Symbolic_Examples = struct
-    open Syntax.SE_CDuce_Symbolic
+    open Syntax.Symbolic
     open Symbolic_Calculus
     open Print
 

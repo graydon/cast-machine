@@ -23,7 +23,7 @@ let rec find a x n =
 if a.(n) = x then n 
 else find a x (n+1)
 
-let cmp_tuple (a,b) (c,d) =
+let cmp_tuple (_,b) (_,d) =
   if b > d then 1 
   else if b < d then -1
   else 0
@@ -35,5 +35,5 @@ let max cmp l =
   let rec aux acc = function
   | [] -> acc
   | x :: t when cmp x acc > 0 -> aux x t
-  | x :: t -> aux acc t
+  | _ :: t -> aux acc t
   in aux (List.hd l) l

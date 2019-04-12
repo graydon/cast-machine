@@ -1,19 +1,10 @@
 (* This file was copied from Tommaso's setvariants *)
 
 %{
-	open Syntax.SE_CDuce
-	open Primitives
+	open Syntax.Eager
 	module CD = Cduce_lib
-
-	let get_var_pat sp =
-		let rp = List.rev sp in 
-		let vp = List.hd rp in 
-		let tp = List.tl rp in 
-		let t = parse_t (String.concat " " (List.rev tp)) 
-		in (t, mk_var vp)
-
-	let arr_t = parse_t "Arrow"
-	let any_arr = parse_t "Any -> Any"
+	open Types
+	open Primitives
 %}
 
 /* Token declarations. */
@@ -23,13 +14,6 @@
 %token PAROPEN PARCLOSE
 %token MOD FUN ARROW REC TIMES PRED SUCC
 
-(**
-%token MATCH WITH FUN REC RECFUN LET IN IF THEN 
-%token ELSE AS
-%token RECFUNCTION
-%token LET FUNCTION
-**)
-/* %token LEFTANGLE RIGHTANGLE */
 
 %token <string> IDENT
 %token <string> PAT 
@@ -43,7 +27,7 @@
 %nonassoc PARCLOSE ELSE FUN
 %left TIMES 
 %nonassoc MOD
-%nonassoc PAT PAROPEN IF 
+%nonassoc PAT PAROPEN
 %left SUCC PRED
 
 
@@ -53,8 +37,8 @@
 
 
 %start prog
-%type <Syntax.SE_CDuce.prog>			   prog 
-%type <Syntax.SE_CDuce.e>              expr
+%type <Syntax.Eager.prog>			   prog 
+%type <Syntax.Eager.e>              expr
 %%
 
 /* Parser definition. */

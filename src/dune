@@ -4,7 +4,7 @@
 
 (menhir
   (modules parser)
-  (flags ("-la" "2" "--trace" "--explain"))
+  (flags ("-la" "2" "--explain"))
 )
 
 ; add  "--trace" "--explain" to flags in order to debug
@@ -13,5 +13,5 @@
 (library
     (name cast)
     (libraries threads cduce str)
-    (modules parser syntax types primitives utils lexer print interpreter compile exec errors)
+    (modules parser bytecode syntax types primitives utils lexer interpreter compile exec errors)
     (preprocess (pps ppx_deriving.show ppx_deriving.eq)))
