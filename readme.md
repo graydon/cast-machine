@@ -43,6 +43,8 @@ The options are:
 ## Syntax
 
 ```
+prog := e ;;
+
 e ::=
     | c                                     % CDuce constant
     | x                                     % Variable
@@ -51,9 +53,9 @@ e ::=
     | fun xs -> e
     | e e                                   % Application
     | e % tau                               % Cast
-    | let rec f x = e
-    | let f x = e
-    | let f : tau = e                 
+    | let rec f x = e in e
+    | let f x = e in e                      % By default, f gets type ? -> ?
+    | let f : tau = e in e                 
     
 c := any writable CDuce constant (pushing this definition may break the parser in fixable ways...)
 
@@ -68,6 +70,24 @@ t? := any CDuce type with question marks (gradual type) in it
 
 
 To be clear: &lambda;<sup>&tau;</sup> x . e is written as `\ tau x . e` or `fun tau x -> e`.
+
+## Example program
+
+Non-tail recursive factorial
+```=ocaml
+let rec fac n =
+    if n then 1
+    else n * f (n-1)
+in fac 42;;
+```
+
+Tail recursive factorial
+```
+let rec fac = fun acc n ->
+    if n then acc
+    else fac (n*acc) (n-1)
+in fac 1 42;;
+```
 
 
 ## Compilation issue
