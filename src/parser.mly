@@ -22,7 +22,7 @@
 %token IF THEN ELSE PLUS MINUS 
 
 %left IN
-%left PLUS MINUS 
+%left PLUS MINUS EQ
 %left IDENT
 %nonassoc PARCLOSE ELSE FUN
 %left TIMES 
@@ -52,12 +52,10 @@ prog:
 expr:
 	| e=app_expr
 			{ e }
-	| IF c=cond THEN e1=expr ELSE e2=expr
+	| IF c=expr THEN e1=expr ELSE e2=expr
 			{ Ifz (c, e1, e2) }
 	| PAROPEN e1=expr PARCLOSE e2=expr
 			{ App (e1, e2) }
-	| PAROPEN e=expr PARCLOSE
-			{ e }
 	| PRED e=expr 
 			{ Pred (e) }
 	| SUCC e=expr
@@ -121,6 +119,8 @@ binop:
 		{ Plus (e1, e2) }
 	| e1=expr MINUS e2=expr
 		{ Minus (e1, e2) }
+	| e1=expr EQ e2=expr
+		{ Eq (e1, e2) }
 	
 
 let_pattern:
@@ -145,11 +145,6 @@ let_pattern:
 
 fun_delim : DOT {} | ARROW {}
 
-cond:
-	| e1=expr EQ e2=expr 
-		{ Eq (e1, e2) }
-	| e=expr
-		{ e }
 
 
 var:

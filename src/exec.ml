@@ -332,13 +332,6 @@ module Exec_Eval_Apply = struct
                 | ACC x :: c, e, s, d ->
                     aux (c, e, (Env.find e x ) :: s, d)
 
-                | IFZ (c1, _) :: c, e, `CST b :: s, d 
-                    when b = Primitives.zero ->
-                    aux (c1 @ c, e, s, d)
-
-                | IFZ (_, c2) :: c, e, _ :: s, d ->
-                    aux (c2 @ c, e, s, d)
-
                 | CLS (x, c', k, m) :: c, e, s, d ->
                     aux (c, e, `CLS (x, c', Env.copy e, k, m) :: s, d)
                 
@@ -346,6 +339,13 @@ module Exec_Eval_Apply = struct
                     let e' = Env.copy e in
                     let () = Env.add e' f @@ `CLS (x, c', e', k, m) in
                     aux (c, e, `CLS (x, c', e', k, m) :: s, d)
+
+                | IFZ (c1, _) :: c, e, `CST b :: s, d 
+                    when b = Primitives.zero ->
+                    aux (c1 @ c, e, s, d)
+
+                | IFZ (_, c2) :: c, e, _ :: s, d ->
+                    aux (c2 @ c, e, s, d)
 
                 | RET :: _, _, v :: s, Frame (c', e') :: d ->
                     aux (c', e', v :: s, d)
@@ -362,9 +362,9 @@ module Exec_Eval_Apply = struct
                 | MUL :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (mult i1 i2)) :: s, d)
 
-                (* | EQB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
-                    let ieq = if i1 = i2 then (Integer (zero)) else (Integer (succ zero)) in
-                    aux (c, e, `CST ieq :: s, d) *)
+                | EQB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
+                    let ieq = if i1 = i2 then zero else one in
+                    aux (c, e, `CST ieq :: s, d)
 
                 | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (add i1 i2)) :: s, d) 
@@ -386,7 +386,7 @@ module Exec_Eval_Apply = struct
                     aux (c, e, `FAIL :: s, d)
 
                 | APP :: c, e,  v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.add e' x v in
+                    let () = Env.replace e' x v in
                     aux (c', e', s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (x, c', e', (t, _), Result) :: s, d ->
@@ -399,11 +399,11 @@ module Exec_Eval_Apply = struct
                         v :: `TYP tdom :: `CLS (x, c', e', k, Result) :: s, d)
 
                 | TCA t :: _, _, v :: `CLS (x, c', e', _, Static) :: s, Boundary t' :: d ->
-                    let () = Env.add e' x v in
+                    let () = Env.replace e' x v in
                     aux (c', e', s, Boundary (cap t t') :: d)
 
                 | TCA t :: _, _, v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.add e' x v in
+                    let () = Env.replace e' x v in
                     aux (c', e', s, Boundary t :: d)
 
                 | TCA t :: c, e, v :: `CLS (x, c', e', ((t1, _) as k), Result) :: s, d ->
@@ -414,7 +414,7 @@ module Exec_Eval_Apply = struct
                     aux (CAS :: TCA t :: c, e, v :: `TYP t2 :: `CLS (x, c', e', k, Result) :: s, d)
 
                 | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.add e' x v in
+                    let () = Env.replace e' x v in
                     aux (c', e', s, d)
 
                 | TAP :: c, e,  v :: `CLS (x, c', e', ((t,_) as k), Result) :: s, d ->
@@ -494,6 +494,9 @@ module Exec_Eval_Apply = struct
                 (string_of_int size_max) (string_of_int step_max);
                 let (step_max, size_max) = max cmp_tuple met.casts in
                 Printf.printf "Largest amount of casts size: %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.env_sizes in
+                Printf.printf "Env max size: %s at step %s\n" 
                 (string_of_int size_max) (string_of_int step_max);
                 let instr_counts = met.instructions in
                 let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in

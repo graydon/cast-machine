@@ -34,24 +34,45 @@ let eval_with_parameters params e =
       let () = if !(params.debug) then print_endline "Running bytecode.." in
       wrap_run btc params
 
+let user_input = ref ""
+let first = ref true
+
 let rec repl () = 
   try
-    print_string @@ !(params.symbolic) ^ !(params.machine) ^ "# ";
-    let lb = Lexing.from_string (read_line ()) in
-    let prog = Parser.prog Lexer.token lb in
-    begin match prog with
-    | Eol -> failwith "didn't expect eol"
-    | Expr e -> eval_with_parameters params e end;
-    (* print_string "prog: "; Print.Print.print_e e; print_endline ""; *)
-    repl ()
+    if !first then print_string @@ !(params.symbolic) ^ !(params.machine) ^ "# ";
+    let nl = read_line () in
+    let tnl = String.trim nl in
+    let ltnl = String.length tnl in
+    let () = user_input := !user_input ^ " " ^ nl in
+    begin match String.sub tnl (ltnl-2) 2 with
+    | ";;" ->
+      let lb = Lexing.from_string !user_input in
+      let prog = Parser.prog Lexer.token lb in
+      begin match prog with
+      | Eol -> failwith "error: didn't expect eol"
+      | Expr e -> 
+          (user_input := ""; first := true;
+          eval_with_parameters params e) end;
+      repl ()
+    | _ ->
+      first := false;
+      repl () 
+    end
   with Expression_Syntax_Error ->
     print_endline "error: expression syntax";
+    user_input := "";
     repl ()
        | Type_Syntax_Error s ->
     print_endline @@ "error: type syntax " ^ s;
+    user_input := "";
     repl ()
        | Empty_Program ->
     repl ()
+       | Parser.Error ->
+    print_endline @@ "error: can't parse program " ^ !user_input;
+    user_input := "";
+    repl () 
+  
 
 (* parse a lexbuf, and return a more explicit error when it fails *)
 let parse_buf_exn lexbuf params =
