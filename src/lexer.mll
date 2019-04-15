@@ -61,7 +61,7 @@ let newline         =  ('\010' | '\013' | "\013\010")
 let blank           = [' ' '\009' '\012']
 (* let decimal_literal = '-'? ['0'-'9'] ['0'-'9' '_']* *)
 let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
-let struct		 			= ' '* ("->"|"|"|"&"|"\\"|"--"|","|";") ' '*
+let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|","|";") ' '*
 (*items: strings, atoms, typevars, intervals *)
 let ppcst						= (['?' '0'-'9' '_']|"--")+			
 (* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
@@ -74,7 +74,7 @@ let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Bool"|"Float"|"AnyXml"
 										|"Namespaces"|"Abstract"
 										|"Caml_int"|"In_channel"
-										|"Out_channel"
+										|"Out_channel"|"Bottom"
 (*delimiters: parenthesis, brackets, braces *)
 let dopen 					= ['(' '[' '{']
 let dclose 					= [')' ']' '}']

@@ -1,17 +1,20 @@
 open Primitives
 open Utils
 open Bytecode
+open Types
 open Types.Print
 open Bytecode.Print
 
 module Exec_Eval_Apply = struct
     open Bytecode_Eval_Apply
 
-    module Env = Hashtbl.Make(struct 
-        type t = var
-        let equal = (=)
-        let hash = Hashtbl.hash
-    end)
+    module Env = struct 
+        include Hashtbl.Make(struct 
+            type t = var
+            let equal = (=)
+            let hash = Hashtbl.hash
+        end)
+    end
 
     type result = [
         | `CST of b
@@ -24,6 +27,8 @@ module Exec_Eval_Apply = struct
         | `FAIL
         ]
     and env = stack_value Env.t
+
+    let empty : env = Env.create 0 
 
     type stack = stack_value list
 
@@ -164,7 +169,7 @@ module Exec_Eval_Apply = struct
             mutable metrics : metrics}
 
 
-        let init_metrics : metrics = 
+        let init_metrics : unit -> metrics = fun () ->
             {stack_sizes = [];  
             longest_proxies = []; 
             casts = [];
@@ -184,7 +189,7 @@ module Exec_Eval_Apply = struct
                 step_start = ref 0;
                 monitor = ref false;
                 states = [];
-                metrics = init_metrics}
+                metrics = init_metrics ()}
         
         let count_cast : stack -> int =
             let rec aux acc = function
@@ -383,16 +388,16 @@ module Exec_Eval_Apply = struct
                 (* new instructions for casts *)
 
                 | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
-                    aux (c, e, `FAIL :: s, d)
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (x, c', e', _, Static) :: s, d ->
                     let () = Env.replace e' x v in
                     aux (c', e', s, Frame (c, e) :: d)
 
-                | APP :: c, e,  v :: `CLS (x, c', e', (t, _), Result) :: s, d ->
-                    let () = Env.add e' x v in
+                | APP :: c, e,  v :: `CLS (x, c', e', ((t, _) as k), Result) :: s, d ->
                     let tres = apply t (typeof_stack_value v) in
-                    aux (c', e', `TYP tres :: s, Frame (CAS :: c, e) :: d)
+                    aux (APP :: CAS :: c, e, 
+                        v :: `CLS (x, c', e', k, Static) :: `TYP tres :: s, d)
 
                 | APP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
                     aux (CAS :: APP :: c, e, 
@@ -427,13 +432,16 @@ module Exec_Eval_Apply = struct
                 | CAS :: c, e, `CST b :: `TYP t :: s, d ->
                     if subtype (constant b) (ceil t) 
                     then aux (c, e, `CST b :: s, d)
-                    else aux (c, e, `FAIL :: s, d)
+                    else aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
 
                 | CAS :: c, e, `FAIL :: `TYP _ :: s, d ->
-                    aux (c, e, `FAIL :: s, d)
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
 
-                | CAS :: c, e, `CLS (x, c', e', t', m) :: `TYP t :: s, d ->
-                    let t'' = comp (t', t) in
+                | CAS :: c, e, `CLS (x, c', e', (t1,t2), m) :: `TYP t :: s, d ->
+                    if is_bottom t2 then 
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
+                    else
+                    let t'' = comp ((t1,t2), t) in
                     aux (c, e, `CLS (x, c', e', t'', m) :: s, d)
 
                 | TYP t :: c, e, s, d ->
@@ -502,7 +510,8 @@ module Exec_Eval_Apply = struct
                 let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in
                 List.iter (fun (by, cnt) ->
                         printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts;
-                print_endline "\n=============\n============="
+                print_endline "\n=============\n=============";
+                run_params.metrics <- init_metrics ()
                 end
 
 end

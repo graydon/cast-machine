@@ -1,5 +1,6 @@
 open Syntax
 open Primitives
+open Types
 open Types.Print
 
 module Bytecode_Eval_Apply = struct

@@ -1,5 +1,5 @@
-open Primitives
 open Bytecode
+open Types
 
 module Compile_Eval_Apply = struct
     open Bytecode_Eval_Apply

@@ -40,6 +40,35 @@ module Print = struct
         CD.Types.Print.pp_const (Format.str_formatter) c; Format.flush_str_formatter ()
 end
 
+(* type environment during evaluation *)
+let env = CD.Builtin.env
+
+(* adding my builtin types *)
+let mk_ident = CD.Ident.U.mk
+let ns_empty = CD.Ns.empty
+
+(* bottom type *)
+let t_bot = mk_atom "Bottom"
+
+let n = (ns_empty, mk_ident "Bottom")
+let env = enter_type (CD.Ident.ident n) t_bot env
+
+let is_bottom t = CD.Types.equal t t_bot
+
+let is_qmark t = 
+  try let (v, b) = CD.Types.Variable.extract t in
+  b && (CD.Var.ident v).[0] = 'd'
+  with Invalid_argument _ -> false
+
+(* important: in cduce, dom of any returns empty, 
+   which we do not want *)
+let dom t = 
+    if t = any || is_qmark t then any
+    else let (d,arr) = get t in
+    if arr = [] || arr = [[]] then t_bot
+    else d
+
+
 
 (* transform a string into a cduce type *)
 let parse_t str = 
@@ -47,13 +76,13 @@ let parse_t str =
     str |> Str.global_substitute (Str.regexp_string "?")
             (fun _ -> " " ^ fresh_dyn_id () ^ " ") 
         |> Stream.of_string |> CD.Parser.pat 
-        |> CD.Typer.typ CD.Builtin.env |> CD.Types.descr
+        |> CD.Typer.typ env |> CD.Types.descr
     with _ -> raise (Type_Syntax_Error str)
 
 let parse_cst str = 
         try
         str |> Stream.of_string |> CD.Parser.expr
-            |> CD.Typer.type_expr CD.Builtin.env |> fst
+            |> CD.Typer.type_expr env |> fst
             |> CD.Compile.compile_eval_expr CD.Compile.empty_toplevel
             |> CD.Value.inv_const
         with _ -> raise Expression_Syntax_Error
