@@ -11,26 +11,26 @@ module Bytecode_Eval_Apply = struct
         | Result
         | Strict
 
-    type cast = tau * tau
+    type kappa = tau * tau
 
     (* TODO: check if this is correct *)
     (* question : what does (t1,t2) mean at all steps ? *)
-    let comp : cast * tau -> cast = 
+    let comp : kappa * tau -> kappa = 
     fun ((t1,t2),t) -> (cap t1 t, cap t2 (dom t))
 
 
     type byte = 
               | ACC of var
               | CST of b
-              | CLS of var * byte list * cast * mark
-              | RCL of var * var * byte list * cast * mark
+              | CLS of var * byte list * kappa * mark
+              | RCL of var * var * byte list * kappa * mark
+              | TYP of kappa
               | APP                     (* app *)
               | TAP                     (* tailapp *)
-              | CAS                     (* cast *)
-              | TCA of tau              (* tailcast *)
+              | CAS                     (* kappa *)
+              | TCA of kappa              (* tailcast *)
               | RET
-              | SUC   | PRE   | MUL | ADD | SUB
-              | TYP of tau
+              | SUC | PRE | MUL | ADD | SUB
               | LET of var
               | END of var
               | EQB
@@ -51,18 +51,18 @@ module Print = struct
         | Result -> "R"
         | Strict -> "S"
 
-    let show_cast (t1, t2) = 
+    let show_kappa (t1, t2) = 
         Printf.sprintf "<%s, %s>" (pp_tau t1) (pp_tau t2)
     
     let rec show_byte verb = function
         | UNI ->   "UNIT"
         | ACC v -> "ACC " ^ (pp_var v)
         | CST b -> "CST " ^ (pp_b b)
-        | TYP t -> "TYP " ^ (pp_tau t)
+        | TYP k -> "TYP " ^ (show_kappa k)
         | CAS ->   "CAS"
         | TAP ->   "TAILAPP"
-        | TCA t -> 
-            Printf.sprintf "TAILCAST %s" (pp_tau t)
+        | TCA k -> 
+            Printf.sprintf "TAILCAST %s" (show_kappa k)
         | CLS (v, btc, (t,_), m) ->
             begin match verb with
             | 0 -> "CLS"

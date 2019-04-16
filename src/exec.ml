@@ -19,22 +19,28 @@ module Exec_Eval_Apply = struct
     type result = [
         | `CST of b
         | `Fail ]
-
-    type stack_value = 
+        
+    and stack_value = 
         [ `CST of b
-        | `CLS of var * bytecode * env * cast * mark
-        | `TYP of tau
+        | `CLS of var * bytecode * env * kappa * mark
+        | `TYP of kappa
         | `FAIL
         ]
     and env = stack_value Env.t
+
+    (* machine values *)
+    type nu = [
+        | `CST of b
+        | `CLS of var * bytecode * env * kappa * mark
+    ]
 
     let empty : env = Env.create 0 
 
     type stack = stack_value list
 
     type dump_item = 
-        | Boundary of tau
-        | Frame of bytecode * env
+        | Boundary of kappa
+        | Frame    of bytecode * env
     type dump = dump_item list 
 
     type state = bytecode * env * stack * dump
@@ -42,17 +48,11 @@ module Exec_Eval_Apply = struct
     module Print = struct 
         let rec show_stack_value : stack_value -> string = function
         | `CST b -> pp_b b
-        (* | `BTC btc -> show_bytecode 2 btc *)
-        (* | `ENV env -> show_env 1 true env *)
         | `CLS (v, btc, env, ts, m) -> 
             Printf.sprintf "C(%s, %s, %s, %s, %s)"
             (pp_var v) (show_bytecode 2 btc) (show_env 1 true env)
-            (show_cast ts) (show_mark m)
-        (* | `RCL (f, v, btc, env, inter) ->
-            Printf.sprintf "C(%s, %s, %s, %s, %s)"
-            (pp_var f) (pp_var v) (show_bytecode 2 btc)
-            (show_env 1 true env) (show_interface inter) *)
-        | `TYP t -> pp_tau t
+            (show_kappa ts) (show_mark m)
+        | `TYP k -> show_kappa k
         | `FAIL -> "Fail"
 
         and show_env_value : int -> stack_value -> string = 
@@ -60,17 +60,11 @@ module Exec_Eval_Apply = struct
         | 2 ->
             begin function
             | `CST b -> pp_b b
-            (* | `BTC btc -> show_bytecode 2 btc *)
-            (* | `ENV env -> "{ nonempty env }" *)
             | `CLS (v, btc, env, cast, m) -> 
                 Printf.sprintf "C(%s, %s, %s, %s, %s)"
                 (pp_var v) (show_bytecode 2 btc) 
-                (show_env 1 true env) (show_cast cast) (show_mark m)
-            (* | `RCL (f, v, btc, env, inter) ->
-                Printf.sprintf "C(%s, %s, %s, %s, %s)"
-                (pp_var f) (pp_var v) (show_bytecode 2 btc) 
-                (show_env 1 true env) (show_interface inter) *)
-            | `TYP t -> pp_tau t
+                (show_env 1 true env) (show_kappa cast) (show_mark m)
+            | `TYP t -> show_kappa t
             | `FAIL -> "Fail" end
         | 0 -> (fun _ -> "_")
         | 1 -> show_stack_value_1
@@ -96,7 +90,7 @@ module Exec_Eval_Apply = struct
                     lenv) ^ " }"
 
         and show_dump_item : dump_item -> string = function
-        | Boundary t -> Printf.sprintf "<%s>" (pp_tau t)
+        | Boundary t -> Printf.sprintf "<%s>" (show_kappa t)
         | Frame (_,e) -> Printf.sprintf "([code], %s)" (show_env 1 true e)
 
         and show_dump : dump -> string =
@@ -106,15 +100,10 @@ module Exec_Eval_Apply = struct
 
         and show_stack_value_1 : stack_value -> string = function
         | `CST b -> pp_b b
-        (* | `BTC _ -> "[code]" *)
-        (* | `ENV _ -> "{env}" *)
         | `CLS (x,_,env,bnd,_) -> Printf.sprintf "C(%s,...,%s, %s)" 
             (pp_var x) (show_env 0 true env) 
-            @@ show_cast bnd
-        (* | `RCL (f,x,_,env,bnd) -> Printf.sprintf "Cr(%s,%s,...,%s, %s)" 
-            (pp_var f) (pp_var x) (show_env 0 true env) 
-            @@ (function |Pass -> "Pass"|Strict _-> "Strict"|Result _->"Result") bnd *)
-        | `TYP t -> pp_tau t
+            @@ show_kappa bnd
+        | `TYP t -> show_kappa t
         | `FAIL -> "Fail" 
 
         let show_stack s verbose = 
@@ -291,46 +280,43 @@ module Exec_Eval_Apply = struct
     module Transitions = struct
         open MetricsDebug
 
-
         let typeof_stack_value : stack_value -> t = function
         | `CST b -> constant b
         | `CLS (_, _, _, (t1, _), _) -> t1
-        | _ -> failwith "error: trying to take typeof of `ENV or bytecode"
+        | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
 
         exception Machine_Stack_Overflow
 
-                    
         let run_check run_params (_, _, s, _) =
             if List.length s > !(run_params.max_stack)
             then raise Machine_Stack_Overflow
 
+        let run_procedures state = 
+        begin
+            run_params.step := !(run_params.step)+1;
+            if !(run_params.monitor) then gather_metrics run_params state;
+            if !(run_params.debug) then print_debug_run run_params state;
+            run_check run_params state;
+            let ref_state = ref state in
+                if !(run_params.step_mode) 
+                && !(run_params.step) >= !(run_params.step_start) then
+                begin 
+                    let cmd = read_line () in 
+                    if cmd = "b" then 
+                        (begin
+                        ref_state := List.hd run_params.states;
+                        run_params.states <- List.tl run_params.states;
+                        run_params.step := !(run_params.step)-2
+                        end)
+                    else run_params.states <- state :: run_params.states
+                end;
+                !ref_state
+        end
 
         let run code env = 
             let rec aux : state -> state = fun state ->
-            run_params.step := !(run_params.step)+1;
-            let () = if !(run_params.monitor) then
-            gather_metrics run_params state in
-            let () = if !(run_params.debug) then
-            print_debug_run run_params state in
-            let () = run_check run_params state in
-            let ref_state = ref state in
-            let () = 
-            if !(run_params.step_mode) 
-            && !(run_params.step) >= !(run_params.step_start) then
-            begin 
-                let cmd = read_line () in 
-                begin
-                if cmd = "b" then 
-                    begin
-                    ref_state := List.hd run_params.states;
-                    run_params.states <- List.tl run_params.states;
-                    run_params.step := !(run_params.step)-2
-                    end
-                else
-                    run_params.states <- state :: run_params.states
-                end
-            end in
-            match !(ref_state) with
+            let state = run_procedures state in 
+            match state with
                 | CST b :: c, e, s, d -> 
                     aux (c, e, `CST b :: s, d)
 
@@ -344,19 +330,85 @@ module Exec_Eval_Apply = struct
                     let e' = Env.copy e in
                     let () = Env.add e' f @@ `CLS (x, c', e', k, m) in
                     aux (c, e, `CLS (x, c', e', k, m) :: s, d)
-
-                | IFZ (c1, _) :: c, e, `CST b :: s, d 
-                    when b = Primitives.zero ->
-                    aux (c1 @ c, e, s, d)
-
-                | IFZ (_, c2) :: c, e, _ :: s, d ->
-                    aux (c2 @ c, e, s, d)
+                
+                | TYP k :: c, e, s, d ->
+                    aux (c, e, `TYP k :: s, d)
 
                 | RET :: _, _, v :: s, Frame (c', e') :: d ->
                     aux (c', e', v :: s, d)
 
-                | RET :: _, _, v :: s, Boundary t :: Frame (c', e') :: d ->
-                    aux (CAS :: c', e', v :: `TYP t :: s, d) 
+                | RET :: _, _, v :: s, Boundary k :: Frame (c', e') :: d ->
+                    aux (CAS :: c', e', v :: `TYP k :: s, d) 
+
+                | LET x :: c, e, v :: s, d ->
+                    let () = Env.add e x v  in
+                    aux (c, e, s, d)
+                
+                | END x :: c, e, s, d ->
+                    let () = Env.remove e x in
+                    aux (c, e, s, d)
+
+                (* new instructions for casts *)
+
+                (* this shouldn't happen (creating a fail terminates execution *)
+                (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
+
+                | APP :: c, e,  v :: `CLS (x, c', e', _, Static) :: s, d ->
+                    let () = Env.replace e' x v in
+                    aux (c', e', s, Frame (c, e) :: d)
+
+                | APP :: c, e,  v :: `CLS (x, c', e', ((t, _) as k), Result) :: s, d ->
+                    let tres = apply t (typeof_stack_value v) in
+                    aux (APP :: CAS :: c, e, 
+                        v :: `CLS (x, c', e', k, Static) :: `TYP (tres, dom tres) :: s, d)
+
+                | APP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
+                    aux (CAS :: APP :: c, e, 
+                        v :: `TYP (tdom, dom tdom) :: `CLS (x, c', e', k, Result) :: s, d)
+
+                | TCA (t1,t2) :: _, _, v :: `CLS (x, c', e', _, Static) :: s, Boundary (t1',t2') :: d ->
+                    let () = Env.replace e' x v in
+                    aux (c', e', s, Boundary (cap t1 t1',cap t2 t2') :: d)
+
+                | TCA k :: _, _, v :: `CLS (x, c', e', _, Static) :: s, d ->
+                    let () = Env.replace e' x v in
+                    aux (c', e', s, Boundary k :: d)
+
+                | TCA (t1,t2) :: c, e, v :: `CLS (x, c', e', ((t1', _) as k), Result) :: s, d ->
+                    let tres = apply t1' (typeof_stack_value v) in
+                    let dtres = dom tres in
+                    aux (TCA (cap t1 tres, cap t2 dtres):: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
+
+                | TCA k :: c, e, v :: `CLS (x, c', e', ((_, t2) as k'), Strict) :: s, d ->
+                    aux (CAS :: TCA k :: c, e, v :: `TYP (t2,dom t2) :: `CLS (x, c', e', k', Result) :: s, d)
+
+                | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
+                    let () = Env.replace e' x v in
+                    aux (c', e', s, d)
+
+                | TAP :: c, e,  v :: `CLS (x, c', e', ((t,_) as k), Result) :: s, d ->
+                    let tres = apply t (typeof_stack_value v) in
+                    let dtres = dom tres in
+                    aux (TCA (tres,dtres) :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
+
+                | TAP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
+                    aux (CAS :: TAP :: c, e, v :: `TYP (tdom,dom tdom) :: `CLS (x, c', e', k, Result) :: s, d)
+
+                | CAS :: c, e, `CST b :: `TYP (t,_) :: s, d ->
+                    if subtype (constant b) (ceil t) 
+                    then aux (c, e, `CST b :: s, d)
+                    else aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
+
+                (* | CAS :: c, e, `FAIL :: `TYP _ :: s, d ->
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
+
+                | CAS :: c, e, `CLS (x, c', e', (t1,t2), m) :: `TYP (t1',t2') :: s, d ->
+                    if is_bottom t2' then 
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
+                    else
+                    let k = (cap t1 t1', cap t2 t2') in
+                    aux (c, e, `CLS (x, c', e', k, m) :: s, d)
 
                 | SUC :: c, e, `CST (Integer i) :: s, d ->
                     aux (c, e, `CST (Integer (succ i)) :: s, d)
@@ -377,75 +429,12 @@ module Exec_Eval_Apply = struct
                 | SUB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (sub i2 i1)) :: s, d) 
 
-                | LET x :: c, e, v :: s, d ->
-                    let () = Env.add e x v  in
-                    aux (c, e, s, d)
-                
-                | END x :: c, e, s, d ->
-                    let () = Env.remove e x in
-                    aux (c, e, s, d)
+                | IFZ (c1, _) :: c, e, `CST b :: s, d 
+                    when b = Primitives.zero ->
+                    aux (c1 @ c, e, s, d)
 
-                (* new instructions for casts *)
-
-                | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
-
-                | APP :: c, e,  v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.replace e' x v in
-                    aux (c', e', s, Frame (c, e) :: d)
-
-                | APP :: c, e,  v :: `CLS (x, c', e', ((t, _) as k), Result) :: s, d ->
-                    let tres = apply t (typeof_stack_value v) in
-                    aux (APP :: CAS :: c, e, 
-                        v :: `CLS (x, c', e', k, Static) :: `TYP tres :: s, d)
-
-                | APP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
-                    aux (CAS :: APP :: c, e, 
-                        v :: `TYP tdom :: `CLS (x, c', e', k, Result) :: s, d)
-
-                | TCA t :: _, _, v :: `CLS (x, c', e', _, Static) :: s, Boundary t' :: d ->
-                    let () = Env.replace e' x v in
-                    aux (c', e', s, Boundary (cap t t') :: d)
-
-                | TCA t :: _, _, v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.replace e' x v in
-                    aux (c', e', s, Boundary t :: d)
-
-                | TCA t :: c, e, v :: `CLS (x, c', e', ((t1, _) as k), Result) :: s, d ->
-                    let tres = apply t1 (typeof_stack_value v) in
-                    aux (TCA (cap t tres) :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
-
-                | TCA t :: c, e, v :: `CLS (x, c', e', ((_, t2) as k), Strict) :: s, d ->
-                    aux (CAS :: TCA t :: c, e, v :: `TYP t2 :: `CLS (x, c', e', k, Result) :: s, d)
-
-                | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.replace e' x v in
-                    aux (c', e', s, d)
-
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((t,_) as k), Result) :: s, d ->
-                    let tres = apply t (typeof_stack_value v) in
-                    aux (TCA tres :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
-
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
-                    aux (CAS :: TAP :: c, e, v :: `TYP tdom :: `CLS (x, c', e', k, Result) :: s, d)
-
-                | CAS :: c, e, `CST b :: `TYP t :: s, d ->
-                    if subtype (constant b) (ceil t) 
-                    then aux (c, e, `CST b :: s, d)
-                    else aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
-
-                | CAS :: c, e, `FAIL :: `TYP _ :: s, d ->
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
-
-                | CAS :: c, e, `CLS (x, c', e', (t1,t2), m) :: `TYP t :: s, d ->
-                    if is_bottom t2 then 
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
-                    else
-                    let t'' = comp ((t1,t2), t) in
-                    aux (c, e, `CLS (x, c', e', t'', m) :: s, d)
-
-                | TYP t :: c, e, s, d ->
-                    aux (c, e, `TYP t :: s, d)
+                | IFZ (_, c2) :: c, e, _ :: s, d ->
+                    aux (c2 @ c, e, s, d)
 
                 | s -> s
 
