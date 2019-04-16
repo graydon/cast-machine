@@ -63,11 +63,11 @@ let blank           = [' ' '\009' '\012']
 let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
 let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|","|";") ' '*
 (*items: strings, atoms, typevars, intervals *)
-let ppcst						= (['?' '0'-'9' '_']|"--")+			
-(* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
+let ppinter					= ['0'-'9']+ | ['0'-'9']+ "--" ['0'-'9']+
+(* let ppxml 					= '['	 ppinter | ['[' ']' ' '])* ']'  *)
 let ppvar           = '\'' ['?' '0'-'9' 'A'-'Z' 'a'-'b' '_']+
-let ppstr 					= '"' ("\t" | "\n" | ['=' '-' '>' '<' '+' 'A'-'Z' 'a'-'z' ' ' '0'-'9' '\'' '_'])* '"'
-let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
+let ppstr 					= '"' ['\\' '=' '-' '>' '<' '+' 'A'-'Z' 'a'-'z' ' ' '0'-'9' '\'' '_']* '"'
+let ppitem					= ppinter|ppvar|ppstr|"[]"|"()"
 										|"Any"|"Empty"|"Int"|"Byte"
 										|"Arrow"|"Char"|"Atom"|"Pair"
 										|"Record"|"String"|"Latin1"
@@ -91,6 +91,8 @@ rule token = parse
   | '.'             { DOT }
 	| "()"						{ UNIT }
 	| "->"						{ ARROW }
+	| '|'							{ OR }
+	| '&'							{ AND }
 	| '*'							{ TIMES }
 	| '+'							{ PLUS }
 	| '-'							{ MINUS }
@@ -99,8 +101,13 @@ rule token = parse
 	| '%'							{ MOD }
   | '('             { PAROPEN }
   | ')'             { PARCLOSE }
+	| '['							{ BRACKOPEN }
+	| ']'							{ BRACKCLOSE }
+	| '{'							{ BRACEOPEN }
+	| '}'							{ BRACECLOSE }
 	| '\\' 						{ FUN }
   | ";;"				    { ENDEXPR }
+	| ppitem as s			{ PATITEM s }
   | ident as id     { filter_id id }
 	| pat as t     		{ PAT t }
 	| eof 						{ EOL }

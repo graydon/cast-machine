@@ -9,14 +9,14 @@
 
 /* Token declarations. */
 
-%token UNIT
+%token UNIT OR AND BRACEOPEN BRACKOPEN BRACKCLOSE BRACECLOSE
 %token DOT COLON
 %token PAROPEN PARCLOSE
 %token MOD FUN ARROW REC TIMES PRED SUCC
 
 
 %token <string> IDENT
-%token <string> PAT 
+%token <string> PAT PATITEM
 %token EOL ENDEXPR
 %token LET EQ IN
 %token IF THEN ELSE PLUS MINUS 
@@ -69,7 +69,9 @@ expr:
 	| l=let_pattern
 			{ l }
 	| UNIT 
-			{ Unit }	
+			{ Unit }
+
+
 
 app_expr:
 	| e=a_expr 
