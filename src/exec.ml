@@ -317,55 +317,56 @@ module Exec_Eval_Apply = struct
             let rec aux : state -> state = fun state ->
             let state = run_procedures state in 
             match state with
-                | CST b :: c, e, s, d -> 
-                    aux (c, e, `CST b :: s, d)
-
                 | ACC x :: c, e, s, d ->
                     aux (c, e, (Env.find e x ) :: s, d)
 
-                | CLS (x, c', k, m) :: c, e, s, d ->
-                    aux (c, e, `CLS (x, c', Env.copy e, k, m) :: s, d)
+                | CST b :: c, e, s, d -> 
+                    aux (c, e, `CST b :: s, d)
+
+                | CLS (x, c', k) :: c, e, s, d ->
+                    aux (c, e, `CLS (x, c', Env.copy e, k, Static) :: s, d)
                 
-                | RCL (f, x, c', k, m) :: c, e, s, d ->
+                | RCL (f, x, c', k) :: c, e, s, d ->
                     let e' = Env.copy e in
-                    let () = Env.add e' f @@ `CLS (x, c', e', k, m) in
-                    aux (c, e, `CLS (x, c', e', k, m) :: s, d)
-                
+                    let () = Env.add e' f @@ `CLS (x, c', e', k, Static) in
+                    aux (c, e, `CLS (x, c', e', k, Static) :: s, d)
+
                 | TYP k :: c, e, s, d ->
                     aux (c, e, `TYP k :: s, d)
-
-                | RET :: _, _, v :: s, Frame (c', e') :: d ->
-                    aux (c', e', v :: s, d)
-
-                | RET :: _, _, v :: s, Boundary k :: Frame (c', e') :: d ->
-                    aux (CAS :: c', e', v :: `TYP k :: s, d) 
-
-                | LET x :: c, e, v :: s, d ->
-                    let () = Env.add e x v  in
-                    aux (c, e, s, d)
-                
-                | END x :: c, e, s, d ->
-                    let () = Env.remove e x in
-                    aux (c, e, s, d)
-
-                (* new instructions for casts *)
-
-                (* this shouldn't happen (creating a fail terminates execution *)
-                (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
 
                 | APP :: c, e,  v :: `CLS (x, c', e', _, Static) :: s, d ->
                     let () = Env.replace e' x v in
                     aux (c', e', s, Frame (c, e) :: d)
 
-                | APP :: c, e,  v :: `CLS (x, c', e', ((t, _) as k), Result) :: s, d ->
-                    let tres = apply t (typeof_stack_value v) in
+                | APP :: c, e,  v :: `CLS (x, c', e', ((t1, _) as k), Result) :: s, d ->
+                    let t' = apply t1 (typeof_stack_value v) in
                     aux (APP :: CAS :: c, e, 
-                        v :: `CLS (x, c', e', k, Static) :: `TYP (tres, dom tres) :: s, d)
+                        v :: `CLS (x, c', e', k, Static) :: `TYP (t', dom t') :: s, d)
 
-                | APP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
+                | APP :: c, e,  v :: `CLS (x, c', e', ((_, t2) as k), Strict) :: s, d ->
                     aux (CAS :: APP :: c, e, 
-                        v :: `TYP (tdom, dom tdom) :: `CLS (x, c', e', k, Result) :: s, d)
+                        v :: `TYP (t2, dom t2) :: `CLS (x, c', e', k, Result) :: s, d)
+
+                | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
+                    let () = Env.replace e' x v in
+                    aux (c', e', s, d)
+
+                | TAP :: c, e,  v :: `CLS (x, c', e', ((t1,_) as k), Result) :: s, d ->
+                    let t = apply t1 (typeof_stack_value v) in
+                    aux (TCA (t,dom t) :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
+
+                | TAP :: c, e,  v :: `CLS (x, c', e', ((_, t2) as k), Strict) :: s, d ->
+                    aux (CAS :: TAP :: c, e, v :: `TYP (t2,dom t2) :: `CLS (x, c', e', k, Result) :: s, d)
+
+                | RET :: c, e, v :: s, Boundary k :: d ->
+                    aux (CAS :: RET :: c, e, v :: `TYP k :: s, d) 
+                
+                | RET :: _, _, v :: s, Frame (c', e') :: d ->
+                    aux (c', e', v :: s, d)
+
+                (* this shouldn't happen as creating a fail terminates execution *)
+                (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
+                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
 
                 | TCA (t1,t2) :: _, _, v :: `CLS (x, c', e', _, Static) :: s, Boundary (t1',t2') :: d ->
                     let () = Env.replace e' x v in
@@ -376,39 +377,33 @@ module Exec_Eval_Apply = struct
                     aux (c', e', s, Boundary k :: d)
 
                 | TCA (t1,t2) :: c, e, v :: `CLS (x, c', e', ((t1', _) as k), Result) :: s, d ->
-                    let tres = apply t1' (typeof_stack_value v) in
-                    let dtres = dom tres in
-                    aux (TCA (cap t1 tres, cap t2 dtres):: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
+                    let t = apply t1' (typeof_stack_value v) in
+                    let domt = dom t in
+                    aux (TCA (cap t1 t, cap t2 domt):: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
 
-                | TCA k :: c, e, v :: `CLS (x, c', e', ((_, t2) as k'), Strict) :: s, d ->
-                    aux (CAS :: TCA k :: c, e, v :: `TYP (t2,dom t2) :: `CLS (x, c', e', k', Result) :: s, d)
-
-                | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.replace e' x v in
-                    aux (c', e', s, d)
-
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((t,_) as k), Result) :: s, d ->
-                    let tres = apply t (typeof_stack_value v) in
-                    let dtres = dom tres in
-                    aux (TCA (tres,dtres) :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
-
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((_, tdom) as k), Strict) :: s, d ->
-                    aux (CAS :: TAP :: c, e, v :: `TYP (tdom,dom tdom) :: `CLS (x, c', e', k, Result) :: s, d)
+                | TCA k :: c, e, v :: `CLS (x, c', e', ((_, t2') as k'), Strict) :: s, d ->
+                    aux (CAS :: TCA k :: c, e, v :: `TYP (t2',dom t2') :: `CLS (x, c', e', k', Result) :: s, d)
 
                 | CAS :: c, e, `CST b :: `TYP (t,_) :: s, d ->
                     if subtype (constant b) (ceil t) 
                     then aux (c, e, `CST b :: s, d)
                     else aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
-
-                (* | CAS :: c, e, `FAIL :: `TYP _ :: s, d ->
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
-
+                    
                 | CAS :: c, e, `CLS (x, c', e', (t1,t2), m) :: `TYP (t1',t2') :: s, d ->
                     if is_bottom t2' then 
                     aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
                     else
                     let k = (cap t1 t1', cap t2 t2') in
                     aux (c, e, `CLS (x, c', e', k, m) :: s, d)
+
+                | LET x :: c, e, v :: s, d ->
+                    let () = Env.add e x v  in
+                    aux (c, e, s, d)
+                
+                | END x :: c, e, s, d ->
+                    let () = Env.remove e x in
+                    aux (c, e, s, d)
+              
 
                 | SUC :: c, e, `CST (Integer i) :: s, d ->
                     aux (c, e, `CST (Integer (succ i)) :: s, d)

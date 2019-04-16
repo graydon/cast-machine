@@ -22,8 +22,8 @@ module Bytecode_Eval_Apply = struct
     type byte = 
               | ACC of var
               | CST of b
-              | CLS of var * byte list * kappa * mark
-              | RCL of var * var * byte list * kappa * mark
+              | CLS of var * byte list * kappa
+              | RCL of var * var * byte list * kappa
               | TYP of kappa
               | APP                     (* app *)
               | TAP                     (* tailapp *)
@@ -63,22 +63,22 @@ module Print = struct
         | TAP ->   "TAILAPP"
         | TCA k -> 
             Printf.sprintf "TAILCAST %s" (show_kappa k)
-        | CLS (v, btc, (t,_), m) ->
+        | CLS (v, btc, (t,_)) ->
             begin match verb with
             | 0 -> "CLS"
             | 1 -> 
             Printf.sprintf "CLS (%s,...)" (pp_var v)
             | _ -> 
-            Printf.sprintf "CLS (%s, %s, %s, %s)"
+            Printf.sprintf "CLS (%s, %s, %s)"
             (pp_var v) (show_bytecode verb btc)
-            (pp_tau t) (show_mark m) end
-        | RCL (f, v, btc, (t, _), m) ->
+            (pp_tau t)  end
+        | RCL (f, v, btc, (t, _)) ->
             begin match verb with
             | 0 -> Printf.sprintf "CLS_%s" (pp_var f)
             | 1 -> Printf.sprintf "CLS_%s (%s,...)" (pp_var f) (pp_var v)
-            | _ -> Printf.sprintf "CLS_%s (%s, %s, %s, %s)" (pp_var f)
+            | _ -> Printf.sprintf "CLS_%s (%s, %s, %s)" (pp_var f)
                 (pp_var v) (show_bytecode verb btc)
-                (pp_tau t) (show_mark m) end
+                (pp_tau t)  end
         | APP ->   "APP"
         | RET ->   "RET"
         | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB"
