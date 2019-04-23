@@ -1,6 +1,7 @@
 (* Interpreter written using big step semantics *)
 open Primitives
 open Types
+(* open Types.Print *)
 open Print
 open Syntax
 
@@ -23,31 +24,47 @@ module Eager_Calculus = struct
         | `Closure of (tau * var * e) * twosome * env
         | `RClosure of var * (tau * var * e) * twosome * env
         | `Fail
+        | `Pair of v * v
         ]
     and env = v Env.t
 
-    let print_v : v -> unit = function
-        | `Fail -> print_string "Fail"
-        | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
+    let rec show_v : v -> string = function
+        | `Fail -> "Fail"
+        | `Cst b -> pp_const Format.str_formatter b; Format.flush_str_formatter ()
         | `RClosure (_, (t,x,e),_,_)
-        | `Closure ((t, x, e), _, _) -> print_e (Lam (t, x, e))
+        | `Closure ((t, x, e), _, _) -> pprint_e (Lam (t, x, e))
+        | `Pair (v1, v2) -> Printf.sprintf "(%s, %s)" (show_v v1) (show_v v2)
 
-
+    let print_v : v -> unit = fun v -> print_string @@ show_v v
 
     let inter ts (t1,t2) = match ts with
         | (t1', t2', _)  -> (cap t1 t1', cap t2 t2', T)
         
-    let typeof : v -> t = function
+    let rec typeof : v -> t = function
         | `Cst b -> constant b
         | `RClosure (_, _,(t1', t2', _), _)
         | `Closure (_, (t1', t2', _), _) -> 
             arrow (cons t1') (cons t2')
         | `Fail -> failwith "error: type of `Fail"
+        | `Pair (v1, v2) -> pair (typeof v1) (typeof v2)
 
     type exec_param = {debug : bool ref;
                        depth : int ref;
                        inline : bool ref}
     let exec_info = {debug = ref false; depth = ref 0; inline = ref false}
+
+    let rec cast v (tau1, tau2) = 
+      begin match v with
+            | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
+            | `Closure (e', tau, env') ->
+                `Closure (e', inter tau (tau1, tau2), env') 
+            | `RClosure (f,e', tau, env') ->
+                `RClosure (f,e',inter tau (tau1, tau2), env') 
+            | `Pair (v1, v2) -> 
+                let v1' = cast v1 (pi1 tau1, tau2) in
+                let v2' = cast v2 (pi2 tau1, tau2) in
+                `Pair (v1', v2')
+            | `Fail -> `Fail end
 
     let eval : e -> v = fun e ->
         let rec aux : env -> e -> v = fun env e -> 
@@ -76,8 +93,18 @@ module Eager_Calculus = struct
                 aux env' e2
         | Lam (tau, x, e) -> 
             `Closure ((tau, x, e), (tau, dom tau, T), Env.empty)
-        | Lamrec (f, tau, x, e) ->
-            `RClosure (f, (tau, x, e), (tau, dom tau, T), Env.empty)
+        
+        | Letrec (f, e1, e2) ->
+            let v =
+            (match aux env e1 with
+            | `Pair (v1, v2) -> `Pair (v1, v2)
+            | `RClosure _ -> failwith "error: didn't expect recursive closure because general recursion not yet supported"
+            | `Closure (a1,a2,a3)
+                -> `RClosure (f,a1,a2,a3)
+            | `Cst c -> `Cst c
+            | `Fail -> `Fail) in
+            let env' = Env.add f v env in
+                aux env' e2
         | Ifz (cond, e1, e2) ->
             let v = aux env cond in 
             if v = `Cst zero then aux env e1
@@ -108,6 +135,17 @@ module Eager_Calculus = struct
             | `Cst (Integer i1), `Cst (Integer i2) -> `Cst (Integer (sub i1 i2))
             | _ -> failwith "trying to substract non-integers"
             end
+        | Pair (e1, e2) -> 
+            let v1 = aux env e1 in
+            let v2 = aux env e2 in `Pair (v1, v2)
+        | Fst (e) ->    
+            let v = aux env e in begin match v with
+            | `Pair (v1, _) -> v1
+            | _ -> failwith "fst of not pair" end
+        | Snd (e) -> 
+            let v = aux env e in begin match v with
+            | `Pair (_, v2) -> v2
+            | _ -> failwith "snd of not pair" end
         | Cast (e, (tau1, tau2)) -> 
             begin match (aux env e) with
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
@@ -115,11 +153,15 @@ module Eager_Calculus = struct
                 `Closure (e', inter tau (tau1, tau2), env') 
             | `RClosure (f,e', tau, env') ->
                 `RClosure (f,e',inter tau (tau1, tau2), env') 
+            | (`Pair (v1, v2)) as v -> 
+                let t = typeof v in 
+                if subtype t (ceil tau1) then `Pair (v1, v2) else `Fail
             | `Fail -> `Fail end
         | App (e1, e2) ->
             exec_info.inline := true;
             let rec enter_closure : v -> v = function
             | `Cst _ -> failwith "error: trying to apply a constant"
+            | `Pair _ -> failwith "error: trying to apply a pair"
             | `Fail -> `Fail
             | `RClosure (f, a1, a2, env) as rcls ->
                 let env' = Env.add f rcls env in
@@ -129,6 +171,9 @@ module Eager_Calculus = struct
                 let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
                 let env'' = Env.add x v0 env' in
                 begin match (aux env'' e') with
+                | `Pair (v1, v2) -> 
+                    let tapp = apply tau1 (typeof v) in
+                    cast (`Pair (v1, v2)) (tapp, dom tapp)
                 | `Cst c -> 
                     if !(exec_info.debug) then
                     begin (* debug *)

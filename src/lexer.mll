@@ -29,7 +29,10 @@ let trim_dollar s =
 			("if", 			  	IF);
 			("else",				ELSE);
 			("pred",				PRED);
-			("succ", 				SUCC)
+			("succ", 				SUCC);
+			("fst", 				FST);
+			("snd", 				SND);
+			("and",					AND)
 			]
 
 	let filter_id id =
@@ -61,11 +64,11 @@ let newline         =  ('\010' | '\013' | "\013\010")
 let blank           = [' ' '\009' '\012']
 (* let decimal_literal = '-'? ['0'-'9'] ['0'-'9' '_']* *)
 let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
-let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|","|";") ' '*
+let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|";") ' '*
 (*items: strings, atoms, typevars, intervals *)
 let ppcst						= (['?' '0'-'9' '_']|"--")+			
 (* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
-let ppvar           = '\'' ['?' '0'-'9' 'A'-'Z' 'a'-'b' '_']+
+let ppvar           = ('\'') ['0'-'9' 'A'-'Z' 'a'-'b' '_']+
 let ppstr 					= '"' ("\t" | "\n" | ['=' '-' '>' '<' '+' 'A'-'Z' 'a'-'z' ' ' '0'-'9' '\'' '_'])* '"'
 let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Any"|"Empty"|"Int"|"Byte"
@@ -91,10 +94,12 @@ rule token = parse
   | '.'             { DOT }
 	| "()"						{ UNIT }
 	| "->"						{ ARROW }
+	| "`"							{ BACKTICK }
 	| '*'							{ TIMES }
 	| '+'							{ PLUS }
 	| '-'							{ MINUS }
 	| '='							{ EQ }
+	| ','							{ COMMA }
 	| ':'							{ COLON }
 	| '%'							{ MOD }
   | '('             { PAROPEN }

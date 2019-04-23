@@ -25,6 +25,7 @@ module Exec_Eval_Apply = struct
         | `CLS of var * bytecode * env * kappa * mark
         | `TYP of kappa
         | `FAIL
+        | `PAIR of stack_value * stack_value
         ]
     and env = stack_value Env.t
 
@@ -45,6 +46,14 @@ module Exec_Eval_Apply = struct
 
     type state = bytecode * env * stack * dump
 
+     let rec typeof_stack_value : stack_value -> t = function
+        | `CST b -> constant b
+        | `CLS (_, _, _, (t1, _), _) -> t1
+        | `PAIR (v1, v2) -> 
+            let t1 = typeof_stack_value v1 in
+            let t2 = typeof_stack_value v2 in pair t1 t2
+        | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
+
     module Print = struct 
         let rec show_stack_value : stack_value -> string = function
         | `CST b -> pp_b b
@@ -54,18 +63,13 @@ module Exec_Eval_Apply = struct
             (show_kappa ts) (show_mark m)
         | `TYP k -> show_kappa k
         | `FAIL -> "Fail"
+        | `PAIR (v1, v2) -> 
+            Printf.sprintf "(%s, %s)" (show_stack_value v1)
+            (show_stack_value v2)
 
         and show_env_value : int -> stack_value -> string = 
         function
-        | 2 ->
-            begin function
-            | `CST b -> pp_b b
-            | `CLS (v, btc, env, cast, m) -> 
-                Printf.sprintf "C(%s, %s, %s, %s, %s)"
-                (pp_var v) (show_bytecode 2 btc) 
-                (show_env 1 true env) (show_kappa cast) (show_mark m)
-            | `TYP t -> show_kappa t
-            | `FAIL -> "Fail" end
+        | 2 -> show_stack_value  
         | 0 -> (fun _ -> "_")
         | 1 -> show_stack_value_1
         | _ -> failwith "wrong verbose argument"
@@ -76,6 +80,9 @@ module Exec_Eval_Apply = struct
         | `CLS (v, btc, _, _,_) -> 
             Printf.sprintf ": %s -> %s = <fun>" (pp_var v) (show_bytecode 2 btc)
         | `FAIL -> "Fail"
+        | `PAIR (v1, v2) as v -> 
+            Printf.sprintf ": %s = (%s, %s)" (pp_tau @@ typeof_stack_value v)
+            (show_stack_value v1) (show_stack_value v2) 
         | _ -> failwith "not a return value"
 
         and show_env : int -> bool -> env -> string =
@@ -105,6 +112,9 @@ module Exec_Eval_Apply = struct
             @@ show_kappa bnd
         | `TYP t -> show_kappa t
         | `FAIL -> "Fail" 
+        | `PAIR (v1, v2) -> 
+            Printf.sprintf "(%s, %s)" (show_stack_value_1 v1)
+            (show_stack_value_1 v2)
 
         let show_stack s verbose = 
         let show_stack_val = begin match verbose with
@@ -280,10 +290,7 @@ module Exec_Eval_Apply = struct
     module Transitions = struct
         open MetricsDebug
 
-        let typeof_stack_value : stack_value -> t = function
-        | `CST b -> constant b
-        | `CLS (_, _, _, (t1, _), _) -> t1
-        | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
+       
 
         exception Machine_Stack_Overflow
 
@@ -328,8 +335,12 @@ module Exec_Eval_Apply = struct
                 
                 | RCL (f, x, c', k) :: c, e, s, d ->
                     let e' = Env.copy e in
-                    let () = Env.add e' f @@ `CLS (x, c', e', k, Static) in
+                    let () = Env.replace e' f @@ `CLS (x, c', e', k, Static) in
                     aux (c, e, `CLS (x, c', e', k, Static) :: s, d)
+
+                | LER f :: c, e, v :: s, d -> 
+                    let () = Env.replace e f v in
+                    aux (c, e, s, d)
 
                 | TYP k :: c, e, s, d ->
                     aux (c, e, `TYP k :: s, d)
@@ -403,7 +414,15 @@ module Exec_Eval_Apply = struct
                 | END x :: c, e, s, d ->
                     let () = Env.remove e x in
                     aux (c, e, s, d)
+
+                | MKP :: c, e, v2 :: v1 :: s, d ->
+                    aux (c, e, `PAIR (v1, v2) :: s, d)
+
+                | FST :: c, e, `PAIR (v1, _) :: s, d -> 
+                    aux (c, e, v1 :: s, d)
               
+                | SND :: c, e, `PAIR (_, v2) :: s, d ->
+                    aux (c, e, v2 :: s, d)
 
                 | SUC :: c, e, `CST (Integer i) :: s, d ->
                     aux (c, e, `CST (Integer (succ i)) :: s, d)

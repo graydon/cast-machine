@@ -6,8 +6,11 @@ open Primitives
 open Errors
 open Lexing
 open Utils
+(* open Abstract.Abstract *)
+let wrap_abstract = fun _ -> ()
 
 let () = if Array.length (Sys.argv) > 1 then begin
+      (if Array.mem "--abstract" Sys.argv then params.abstract := true);
       (if Array.mem "--interpreter" Sys.argv then params.machine := "");
       (if Array.mem "--machine" Sys.argv then params.machine := "machine");
       (if Array.mem "--symbolic" Sys.argv then params.symbolic := "symbolic");
@@ -27,12 +30,15 @@ let () = if Array.length (Sys.argv) > 1 then begin
 let eval_with_parameters params e =
   let () = if !(params.debug) 
   then (print_string "Program: "; print_e e; print_endline "") in
-  if !(params.machine) = "" then wrap_eval e
-  else
+  if !(params.machine) != "" then
+  begin
       let () = if !(params.debug) then print_endline "Compiling.." in
       let btc = compile e in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
       wrap_run btc params
+  end
+  else if !(params.abstract) then wrap_abstract e
+  else wrap_eval e
 
 let user_input = ref ""
 let first = ref true
@@ -69,7 +75,7 @@ let rec repl () =
        | Empty_Program ->
     repl ()
        | Parser.Error ->
-    print_endline @@ "error: can't parse program " ^ !user_input;
+    print_endline @@ "error: can't parse program {" ^ !user_input ^ "}";
     user_input := "";
     repl () 
   

@@ -1,6 +1,7 @@
 
 type parameters_structure =
-  {debug : bool ref;
+  {abstract : bool ref;
+   debug : bool ref;
    symbolic : string ref;
    machine: string ref;
    load_file : bool ref;
@@ -10,7 +11,8 @@ type parameters_structure =
    monitor : bool ref}
 
 let params =
-  {debug = ref false;
+  {abstract = ref false;
+  debug = ref false;
   symbolic = ref "";
   machine = ref "machine";
   load_file = ref false;

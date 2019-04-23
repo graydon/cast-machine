@@ -36,6 +36,8 @@ module Bytecode_Eval_Apply = struct
               | EQB
               | IFZ of byte list * byte list
               | UNI
+              | MKP | FST | SND
+              | LER of var (* letrec *)
     (* [@@deriving eq,show] *)
 
     type bytecode = byte list
@@ -55,12 +57,16 @@ module Print = struct
         Printf.sprintf "<%s, %s>" (pp_tau t1) (pp_tau t2)
     
     let rec show_byte verb = function
+        | LER v -> "LER " ^ (pp_var v) 
         | UNI ->   "UNIT"
         | ACC v -> "ACC " ^ (pp_var v)
         | CST b -> "CST " ^ (pp_b b)
         | TYP k -> "TYP " ^ (show_kappa k)
+        | FST ->   "FST"
+        | SND   -> "SND"
         | CAS ->   "CAS"
         | TAP ->   "TAILAPP"
+        | MKP ->   "make_pair"
         | TCA k -> 
             Printf.sprintf "TAILCAST %s" (show_kappa k)
         | CLS (v, btc, (t,_)) ->

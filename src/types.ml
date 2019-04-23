@@ -53,7 +53,7 @@ let t_bot = mk_atom "Bottom"
 let n = (ns_empty, mk_ident "Bottom")
 let env = enter_type (CD.Ident.ident n) t_bot env
 
-let is_bottom t = CD.Types.equal t t_bot
+let is_bottom t = equal t t_bot
 
 let is_qmark t = 
   try let (v, b) = CD.Types.Variable.extract t in

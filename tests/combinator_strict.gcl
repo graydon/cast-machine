@@ -1,5 +1,4 @@
 (* factorial using a combinator *)
-(* the fact that it works is (honestly) a bit worrying to me *)
 let self_app = fun x -> x x in
 let combi = fun f ->
     self_app (fun x -> f (fun y -> (x x) y)) 

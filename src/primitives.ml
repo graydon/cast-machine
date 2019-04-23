@@ -15,6 +15,7 @@ let cons = CD.Types.cons
 let constant = CD.Types.constant
 let descr = CD.Types.descr
 let get = CD.Types.Arrow.get
+let equal = CD.Types.equal
 
     
 let subtype = CD.Types.subtype
@@ -22,6 +23,9 @@ let app tapp targ = CD.Types.Arrow.apply (get tapp) targ
 let cap = CD.Types.cap
 let cup = CD.Types.cup
 let diff = CD.Types.diff
+let pair t1 t2 = CD.Types.times (cons t1) (cons t2)
+let pi1 t = t |> CD.Types.Product.get ~kind:`Normal |> CD.Types.Product.pi1
+let pi2 t = t |> CD.Types.Product.get ~kind:`Normal |> CD.Types.Product.pi2
 let mk_atom s = s |> CD.Atoms.V.mk_ascii |> CD.Atoms.atom |> CD.Types.atom
 let mk_var s = CD.Var.mk ~internal:false s
 let mk_arrow t1 t2 = arrow (cons t1) (cons t2)
