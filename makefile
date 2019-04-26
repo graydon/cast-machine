@@ -4,6 +4,7 @@
 FLAGS=
 
 default: build
+repl_exe="${CURDIR}/_build/default/repl.exe"
 
 CDUCE_LIB_DIR="`ocamlfind query cduce`"
 
@@ -12,7 +13,9 @@ build:
 	@echo "'.opam/<switch>/lib/cduce/+camlp4' and running 'make fix_linking' as root"
 	dune build repl.exe $(FLAGS)
 	chmod +x cast.exe
-	ln -sf "${CURDIR}/_build/default/repl.exe" "${CURDIR}/bin/repl.exe"
+	if [ -e "${repl_exe}" ]; then\
+		ln -f "${repl_exe}" "${CURDIR}/bin/repl.exe";\
+	fi
 	@echo ""
 	@echo "Build finished. You can now start ./cast.exe"
 
