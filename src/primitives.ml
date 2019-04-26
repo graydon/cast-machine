@@ -14,12 +14,9 @@ let times = CD.Types.times
 let cons = CD.Types.cons
 let constant = CD.Types.constant
 let descr = CD.Types.descr
-let get = CD.Types.Arrow.get
 let equal = CD.Types.equal
 
-    
 let subtype = CD.Types.subtype
-let app tapp targ = CD.Types.Arrow.apply (get tapp) targ
 let cap = CD.Types.cap
 let cup = CD.Types.cup
 let diff = CD.Types.diff
@@ -36,6 +33,26 @@ let succ = CD.Intervals.V.succ
 let pred = CD.Intervals.V.pred
 
 let enter_type = CD.Typer.enter_type
+
+(*apply prims*)
+let get = CD.Types.Arrow.get
+let apply = CD.Types.Arrow.apply
+let apply_noarg = CD.Types.Arrow.apply_noarg
+let need_arg = CD.Types.Arrow.need_arg
+(* TODO is it faster to use apply_noarg when possible *)
+(* pro: it doesn't use subtyping *)
+(* a check is done to see if possible (List.exists on arrows) *)
+let app tapp targ = 
+  let (dom,arr) = get tapp in 
+  if need_arg (dom,arr) then apply (dom,arr) targ
+  else apply_noarg (dom,arr)
+
+let teg (_,arr) =
+  List.fold_left (fun cup_acc l -> 
+    let cap_arr = List.fold_left (fun cap_acc (s,t) -> cap cap_acc (mk_arrow s t)) any l
+    in cup cup_acc cap_arr) empty arr 
+    
+
 
 
 

@@ -11,11 +11,8 @@ build:
 	@echo "If this fails due to camlp4lib, try deleting the directory"
 	@echo "'.opam/<switch>/lib/cduce/+camlp4' and running 'make fix_linking' as root"
 	dune build repl.exe $(FLAGS)
-	rm -f cast.exe
-	echo "#! /bin/sh" >> cast.exe
-	echo "" >> cast.exe
-	echo "rlwrap -a _build/default/repl.exe \"\$$@\" " >> cast.exe
 	chmod +x cast.exe
+	ln -sf "${CURDIR}/_build/default/repl.exe" "${CURDIR}/bin/repl.exe"
 	@echo ""
 	@echo "Build finished. You can now start ./cast.exe"
 

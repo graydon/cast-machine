@@ -38,6 +38,9 @@ module Print = struct
     let pp_tau = pprint_t
     let pp_b c = 
         CD.Types.Print.pp_const (Format.str_formatter) c; Format.flush_str_formatter ()
+
+    let show_arr (_,arr) = 
+      List.map (fun l -> List.map (fun (a,b) -> Printf.printf "%s, %s\n" (pp_tau a) (pp_tau b)) l) arr
 end
 
 (* type environment during evaluation *)
@@ -46,6 +49,12 @@ let env = CD.Builtin.env
 (* adding my builtin types *)
 let mk_ident = CD.Ident.U.mk
 let ns_empty = CD.Ns.empty
+
+(* qmark type *)
+let t_dyn = mk_atom "Dyn"
+
+let n = (ns_empty, mk_ident "Dyn")
+let env = enter_type (CD.Ident.ident n) t_dyn env
 
 (* bottom type *)
 let t_bot = mk_atom "Bottom"
@@ -88,8 +97,10 @@ let parse_cst str =
         with _ -> raise Expression_Syntax_Error
 
 (* some types *)
-let arr_t = parse_t "Arrow"
-let narr_t = neg (arr_t)
+let t_arr = parse_t "Arrow"
+let t_not_arr = neg (t_arr)
+let t_int = parse_t "Int"
+let t_bool = parse_t "Bool"
 
 
 let split = Str.split (Str.regexp " +")

@@ -160,8 +160,8 @@ module Eager_Calculus = struct
         | App (e1, e2) ->
             exec_info.inline := true;
             let rec enter_closure : v -> v = function
-            | `Cst _ -> failwith "error: trying to apply a constant"
-            | `Pair _ -> failwith "error: trying to apply a pair"
+            | `Cst _ -> failwith "error: trying to result a constant"
+            | `Pair _ -> failwith "error: trying to result a pair"
             | `Fail -> `Fail
             | `RClosure (f, a1, a2, env) as rcls ->
                 let env' = Env.add f rcls env in
@@ -172,7 +172,7 @@ module Eager_Calculus = struct
                 let env'' = Env.add x v0 env' in
                 begin match (aux env'' e') with
                 | `Pair (v1, v2) -> 
-                    let tapp = apply tau1 (typeof v) in
+                    let tapp = result tau1 (typeof v) in
                     cast (`Pair (v1, v2)) (tapp, dom tapp)
                 | `Cst c -> 
                     if !(exec_info.debug) then
@@ -181,18 +181,18 @@ module Eager_Calculus = struct
                         print_t tau1; print_endline "";
                         print_t (typeof v); print_endline "";
                         print_v v; print_endline "";
-                        print_t (apply tau1 (typeof v)); print_endline ""
+                        print_t (result tau1 (typeof v)); print_endline ""
                     end;
-                    if subtype (constant c) (ceil (apply tau1 (typeof v))) 
+                    if subtype (constant c) (ceil (result tau1 (typeof v))) 
                     then `Cst c else 
                     begin print_endline "cst subtype failed"; `Fail end
                 | `Closure (fe'', tau', _) ->
-                    let tapp = apply tau1 (typeof v) in
+                    let tapp = result tau1 (typeof v) in
                     `Closure (fe'', inter tau' (tapp, dom tapp), env'')
                 | `RClosure (f, fe'', tau', _) ->
-                    let tapp = apply tau1 (typeof v) in
+                    let tapp = result tau1 (typeof v) in
                     `RClosure (f, fe'', inter tau' (tapp, dom tapp), env'')
-                | `Fail -> `Fail (* trying to apply `Fail as a function *)
+                | `Fail -> `Fail (* trying to result `Fail as a function *)
                 end
             in enter_closure (aux env e1)
         
@@ -227,7 +227,7 @@ module Symbolic_Calculus = struct
             (cap t1 t1', cap t2 t2')
         | App (t, s) -> 
             let (t1, _) = eval_sigma s in
-            let t' = apply t1 t in (t', dom t')
+            let t' = result t1 t in (t', dom t')
         | Dom s -> 
             let (_, t2) = eval_sigma s in
             (t2, dom t2)
@@ -278,7 +278,7 @@ module Symbolic_Calculus = struct
         | `Fail -> `Fail end
     | App (e1, e2) ->
         begin match (eval_aux env e1) with
-        | `Cst _ -> failwith "error: trying to apply a constant"
+        | `Cst _ -> failwith "error: trying to result a constant"
         | `Fail -> `Fail
         | `Closure (((_, x, e') , sigma1, env')) -> 
             let v' = eval_aux env e2 in
@@ -287,11 +287,11 @@ module Symbolic_Calculus = struct
             let env'' = Env.add x (`Cast (v', Dom sigma1)) env' in
             begin match (eval_aux env'' e') with
             | `Cst c -> let tau1 = eval1 sigma1 in 
-                if subtype (constant c) (ceil (apply tau1 (typeof v'))) 
+                if subtype (constant c) (ceil (result tau1 (typeof v'))) 
                 then `Cst c else `Fail
             | `Closure (fe'', sigma2, env'') ->
                 `Closure (fe'', Comp (App (typeof v', sigma1), sigma2), env'')
-            | `Fail -> `Fail (* trying to apply `Fail as a function *)
+            | `Fail -> `Fail (* trying to result `Fail as a function *)
             end
         end
     

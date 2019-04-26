@@ -13,7 +13,7 @@ module type Gradual_Type = sig
     val subst : t -> (var * t) list -> t
     val ceil : tau -> t
     val floor : tau -> t
-    val apply : tau -> tau -> tau
+    val result : tau -> tau -> tau
 end
 
 module CDuce_Gradual_Types : Gradual_Type = struct
@@ -54,10 +54,9 @@ module CDuce_Gradual_Types : Gradual_Type = struct
             (CD.Var.Set.filter (fun v ->
               (CD.Var.ident v).[0] = 'd') all)))
 
-    let apply tapp targ = 
-      let qm = qmark () in
-      let tapp' = subst_grad tapp qm in 
-      let targ' = subst_grad targ qm in
+    let result tapp targ = 
+      let tapp' = subst_grad tapp t_dyn in 
+      let targ' = subst_grad targ t_dyn in
       let tres = app tapp' targ' in
       refresh_grad tres
 
@@ -66,8 +65,8 @@ module CDuce_Gradual_Types : Gradual_Type = struct
     (* let subst_single = CD.Types.Subst.single *)
     (* let variance = CD.Types.Variable.variance *)
     (* let pp_type = CD.Types.Print.pp_type *)
-    (* let apply = CD.Types.Arrow.apply *)
-      (* [apply t1 t2 computes [t1 \circ t2] *)
+    (* let result = CD.Types.Arrow.result *)
+      (* [result t1 t2 computes [t1 \circ t2] *)
     (* let get = CD.Types.Arrow.get *)
     (* let is_arrow t = subtype t CD.Types.Arrow.any *)
 

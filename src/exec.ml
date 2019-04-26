@@ -350,7 +350,7 @@ module Exec_Eval_Apply = struct
                     aux (c', e', s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (x, c', e', ((t1, _) as k), Result) :: s, d ->
-                    let t' = apply t1 (typeof_stack_value v) in
+                    let t' = result t1 (typeof_stack_value v) in
                     aux (APP :: CAS :: c, e, 
                         v :: `CLS (x, c', e', k, Static) :: `TYP (t', dom t') :: s, d)
 
@@ -363,7 +363,7 @@ module Exec_Eval_Apply = struct
                     aux (c', e', s, d)
 
                 | TAP :: c, e,  v :: `CLS (x, c', e', ((t1,_) as k), Result) :: s, d ->
-                    let t = apply t1 (typeof_stack_value v) in
+                    let t = result t1 (typeof_stack_value v) in
                     aux (TCA (t,dom t) :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
 
                 | TAP :: c, e,  v :: `CLS (x, c', e', ((_, t2) as k), Strict) :: s, d ->
@@ -388,7 +388,7 @@ module Exec_Eval_Apply = struct
                     aux (c', e', s, Boundary k :: d)
 
                 | TCA (t1,t2) :: c, e, v :: `CLS (x, c', e', ((t1', _) as k), Result) :: s, d ->
-                    let t = apply t1' (typeof_stack_value v) in
+                    let t = result t1' (typeof_stack_value v) in
                     let domt = dom t in
                     aux (TCA (cap t1 t, cap t2 domt):: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
 
