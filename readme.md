@@ -15,13 +15,13 @@ To build, use the makefile (which is an interface to **dune**):
 ```
     make
 ```
-And to run it
+To run it
 ```
-    ./cast.exe --machine --load <some file>
+    ./cast.exe --load <some file>
 ```
 Or to try the repl
 ```
-    ./cast.exe --machine
+    ./cast.exe
 ```
 To check on tail call elimination :
 ```
