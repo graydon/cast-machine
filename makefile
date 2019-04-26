@@ -5,8 +5,16 @@ FLAGS=
 
 default: build
 repl_exe="${CURDIR}/_build/default/repl.exe"
+repl_bc="${CURDIR}/_build/default/repl.bc"
 
 CDUCE_LIB_DIR="`ocamlfind query cduce`"
+
+native:
+	dune build repl.bc $(FLAGS)
+	if [ -e "${repl_bc}" ]; then\
+		ln -f "${repl_bc}" "${CURDIR}/bin/repl.bc";\
+	fi
+
 
 build:
 	@echo "If this fails due to camlp4lib, try deleting the directory"
