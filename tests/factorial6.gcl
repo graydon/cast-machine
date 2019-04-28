@@ -1,4 +1,6 @@
 let rec fac = fun acc n ->
     if n then acc
     else fac (n*acc) (n-1)
-in fac 1 200;;
+in fac 1 10;;
+
+(** 3628800 = 3628800 **)

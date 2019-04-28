@@ -4,11 +4,7 @@ let f =
     else "bof"
 in f 10;;
 
+(** [ 'b' 'o' 'f' ] = "bof" `nil **)
 
-let f =
-    fun x ->
-    if x then "youpi"
-    else "bof"
-in f 0;;
 
 

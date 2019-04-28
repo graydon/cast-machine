@@ -7,3 +7,5 @@ let suc = fun n ->
 let deux = suc (suc zero) in 
 let id = fun x -> succ x in
     deux id 0;;
+
+(** 2 = 2 **)

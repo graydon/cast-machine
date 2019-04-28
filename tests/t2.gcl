@@ -3,7 +3,4 @@ let g : (? -> ?) -> 0 =
     fun k -> k 0
 in g f;;
 
-let f : ? -> ? = fun x -> x in 
-let g : (? -> ?) -> 1 =
-    fun k -> k 0
-in g f;;
+(** 0 = 0 **)

@@ -2,4 +2,4 @@
 let rec f x = if x then 1 else x * f (x-1)
 in f 10;;
 
-"this factorial overflows because it is not tail recursive";;
+(** 3628800 = 3628800 **)

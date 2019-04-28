@@ -1,5 +1,5 @@
 (* non permis par le parser actuellement
-   car pas de fonctions a plusieurs arguments *)
+   car pas de fonctions typees a plusieurs arguments *)
 (* let rec fac : Int -> Int -> Int = fun acc n ->
     if n then acc
     else ((fac (n*acc)) (n-1)) % Int

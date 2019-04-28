@@ -3,3 +3,5 @@ let rec f : Int -> Int =
     if n then 1
     else f (n-1)
 in f 100;;
+
+(** 1 = 1 **)

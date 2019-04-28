@@ -1,0 +1,4 @@
+let f : ? -> Bool = fun x -> `true in 
+f (42 % ?);;
+
+(** `true = `true **)

@@ -1,2 +1,4 @@
 let x = 0 % 0 % 0 in 
 let f = fun x . x in f x;;
+
+(** 0 = 0 **)

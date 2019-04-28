@@ -3,4 +3,6 @@ let pi2 p = p 1 in
 let rec f = fun i ->
     if i then (fun n -> if n then `true else ((pi2 f) (n-1)) % Bool)
     else (fun n -> if n then `false else ((pi1 f) (n-1)) % ?)
-in (f 1) 100000;;
+in (f 1) 1000;;
+
+(** `false = `false **)

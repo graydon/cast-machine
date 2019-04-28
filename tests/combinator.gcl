@@ -1,6 +1,5 @@
 (* wrong fixpoint: works for lazy languages but here it just blows up *)
-let combi f = (fun x1 -> f (x1 x1)) (fun x2 -> f (x2 x2)) in
+(* let combi f = (fun x1 -> f (x1 x1)) (fun x2 -> f (x2 x2)) in
 let fac g = fun n -> if n then 1 else g (n-1) in
-let fac_rec = combi fac in 0;;
+let fac_rec = combi fac in 0;; *)
 
-"this overflow indicates our language is strict";;
