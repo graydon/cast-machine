@@ -10,7 +10,7 @@ module type Gradual_Type = sig
     type t = Types.t (* static type *)
     type tau = Types.t (* dynamic type *)
     type subst = Types.subst
-    val subst : t -> (var * t) list -> t
+    val subst_single : t -> var * t  -> t
     val ceil : tau -> t
     val floor : tau -> t
     val result : tau -> tau -> tau
@@ -19,101 +19,38 @@ end
 module CDuce_Gradual_Types : Gradual_Type = struct
     type t = Types.t
     type var = Types.var
-    (* type varset = Types.varset *)
     type subst = Types.subst
-    type b = Types.b (* surely false *)
-    (* type subst = CD.Types.Subst.t *)
-    (* Idée: à la manière des schemes de Tommaso, 
-    implémenter les types graduels comme des types
-    t possédant des variables de types assignées à `Dyn 
-    Je choisis cette version par rapport à celle utilisant 
-    des atomes `Dyn, parce que CDuce permet de récupérer
-    la variance des variables de type facilement, et aussi
-    les variables de type permettent de les représenter de 
-    manière distincte (avec des [fresh_var ()]) *)
+    type b = Types.b
     type tau = t
 
+    let subst_single = CD.Types.Subst.single
 
-    let subst = CD.Types.Subst.full_list
-    
-    let refresh_grad t =
-      let _, _, _, all = collect_vars t in
-      subst t
-          (List.map 
-            (fun v -> (v, qmark()))
-            (CD.Var.Set.get 
-              (CD.Var.Set.filter (fun v ->
-                (CD.Var.ident v).[0] = 'd') all)))
+    let result tapp targ = app tapp targ
 
-    let subst_grad t trep = 
-      let _, _, _, all = collect_vars t in
-      subst t
-        (List.map 
-          (fun v -> (v, trep))
-          (CD.Var.Set.get 
-            (CD.Var.Set.filter (fun v ->
-              (CD.Var.ident v).[0] = 'd') all)))
+    (* ceil and floor functions *)
+    (* warning : these two functions erase type variables with Any ...*)
+    let rec ceil t =
+     if CD.Types.VarArrow.is_empty (CD.Types.VarArrow.proj t) then 
+        subst_single t (v_dyn, any) 
+    else
+        let (dom,arr) = get t in
+        let arr' = List.map (fun l -> 
+        List.map (fun (d,r) -> (floor d, ceil r)) l) arr
+        in teg (dom, arr')
 
-    let result tapp targ = 
-      let tapp' = subst_grad tapp t_dyn in 
-      let targ' = subst_grad targ t_dyn in
-      let tres = app tapp' targ' in
-      refresh_grad tres
-
-
-
-    (* let subst_single = CD.Types.Subst.single *)
-    (* let variance = CD.Types.Variable.variance *)
-    (* let pp_type = CD.Types.Print.pp_type *)
-    (* let result = CD.Types.Arrow.result *)
-      (* [result t1 t2 computes [t1 \circ t2] *)
-    (* let get = CD.Types.Arrow.get *)
-    (* let is_arrow t = subtype t CD.Types.Arrow.any *)
-
-    let ceil t =
-      let _, pos, neg, _ = collect_vars t in
-      (* check if the first letter of the ident 
-      is 'd', because then it is  gradual typevar *)
-      let t' = 
-      subst t 
-        (List.map 
-          (fun v -> (v, any))
-          (CD.Var.Set.get 
-            (CD.Var.Set.filter (fun v ->
-              (CD.Var.ident v).[0] = 'd') pos)))
-      in
-      subst t'
-        (List.map 
-          (fun v -> (v, empty))
-          (CD.Var.Set.get 
-            (CD.Var.Set.filter (fun v ->
-              (CD.Var.ident v).[0] = 'd') neg)))
-          
-    let floor t =
-      let _, pos, neg, _ = collect_vars t in
-      (* check if the first letter of the ident 
-      is 'd', because then it is a gradual typevar *)
-      let t' = 
-      subst t 
-        (List.map 
-          (fun v -> (v, any))
-          (CD.Var.Set.get 
-            (CD.Var.Set.filter (fun v ->
-              (CD.Var.ident v).[0] = 'd') neg)))
-      in
-      subst t'
-        (List.map 
-          (fun v -> (v, empty))
-          (CD.Var.Set.get 
-            (CD.Var.Set.filter (fun v ->
-              (CD.Var.ident v).[0] = 'd') pos)))
-
-    
+    and floor t =
+    if CD.Types.VarArrow.is_empty (CD.Types.VarArrow.proj t) then 
+        subst_single t (v_dyn, empty) 
+    else
+        let (dom,arr) = get t in
+        let arr' = List.map (fun l -> 
+        List.map (fun (d,r) -> (ceil d, floor r)) l) arr
+        in teg (dom, arr')
 end
 
 module type Cast_Expr = sig
     include Gradual_Type
-    type p (* blame labels *)
+    type p              (* blame labels *)
     type alpha_vector
     type t_vector
     type castkind
@@ -132,8 +69,6 @@ module type Cast_Expr = sig
       | Ifz of e * e * e
       | Eq of e * e
       | Unit
-      (* | TwoCast of e * tau * tau  *)
-    (* type v *)
      type prog =
 		| Expr of e
 		| Eol
@@ -149,7 +84,7 @@ struct
         [ | `Simple of int
           | `Pos of int * int
           | `Neg of int * int ]
-(* hi *)
+    
     type castkind = tau * tau
     type e = 
       | Var of var

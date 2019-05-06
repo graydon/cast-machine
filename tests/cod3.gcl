@@ -1,0 +1,5 @@
+let fl : ? -> ? = fun x -> x in
+let flc = fl % (? -> Int) % (? -> ?)  in
+flc 42;;
+
+(** 42 = 42 **)

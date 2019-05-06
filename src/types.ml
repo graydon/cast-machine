@@ -19,6 +19,8 @@ let fresh_dyn_var () =
   let n = Oo.id (object end) in
   CD.Var.mk ~internal:false (Printf.sprintf "d%04d" n)
 
+let fresh_dyn () = var (fresh_dyn_var ())
+
 let fresh_var_type () = CD.Types.var (fresh_var ())
 
 module Print = struct 
@@ -32,8 +34,8 @@ module Print = struct
                     (CD.Var.ident v).[0] = 'd') av
             in
             CD.Types.Subst.full_list t 
-                (List.map (fun v -> (v, var (mk_var "?"))) (CD.Var.Set.get dv))
-            in CD.Types.Print.string_of_type t'
+                (List.map (fun v -> (v, var (mk_var "?"))) (CD.Var.Set.get dv)) in 
+        CD.Types.Print.string_of_type t'
     let pp_var = CD.Var.ident 
     let pp_tau = pprint_t
     let pp_b c = 
@@ -51,10 +53,11 @@ let mk_ident = CD.Ident.U.mk
 let ns_empty = CD.Ns.empty
 
 (* qmark type *)
-let t_dyn = mk_atom "Dyn"
+let v_dyn = fresh_dyn_var ()
+let t_dyn = var v_dyn
 
-let n = (ns_empty, mk_ident "Dyn")
-let env = enter_type (CD.Ident.ident n) t_dyn env
+(* let n = (ns_empty, mk_ident "Dyn")
+let env = enter_type (CD.Ident.ident n) t_dyn env *)
 
 (* bottom type *)
 let t_bot = mk_atom "Bottom"
@@ -76,8 +79,6 @@ let dom t =
     else let (d,arr) = get t in
     if arr = [] || arr = [[]] then t_bot
     else d
-
-
 
 (* transform a string into a cduce type *)
 let parse_t str = 
@@ -102,16 +103,13 @@ let t_not_arr = neg (t_arr)
 let t_int = parse_t "Int"
 let t_bool = parse_t "Bool"
 
-
 let split = Str.split (Str.regexp " +")
-
 
 let process_funpat f =
     let fl = split f in 
     let fn = String.concat "" (List.tl (fl)) in
 	parse_t fn
 
-
-let qmark () = var (fresh_dyn_var ())
-let qm () = cons (qmark ())
-let qfun () = arrow (qm ()) (qm ())
+let qmark () = t_dyn
+let qm () = cons (t_dyn)
+let qfun () = mk_arrow (qmark ()) (qmark ())

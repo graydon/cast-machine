@@ -5,29 +5,6 @@ open Primitives
 module Compile_Eval_Apply = struct
     open Bytecode_Eval_Apply
 
-    (* let rec replace : var -> var -> e -> e = fun xo xf -> function
-    | Var x when x = xo -> Var xf
-    | Var x -> Var x
-    | App (e1, e2) -> App (replace xo xf e1, replace xo xf e2)
-    | Fst e -> Fst (replace xo xf e)
-    | Snd e -> Snd (replace xo xf e)
-    | Lam (t, x, e) when x = xo -> Lam (t, xf, replace xo xf e)
-    | Lam (t, x, e) -> Lam (t, x, replace xo xf e)
-    | Cast (e, k) -> Cast (replace xo xf e, k)
-    | Pair (e1, e2) -> Pair (replace xo xf e1, replace xo xf e2)
-    | Let (x, e1, e2) when x = xo -> Let (xf, replace xo xf e1, replace xo xf e2)
-    | Let (x, e1, e2) -> Let (x, replace xo xf e1, replace xo xf e2)
-    | Letrec (x, e1, e2) when x = xo -> Letrec (xf, replace xo xf e1, replace xo xf e2)
-    | Letrec (x, e1, e2) -> Letrec (x, replace xo xf e1, replace xo xf e2)
-    |Succ e -> Succ (replace xo xf e)
-    |Pred e -> Pred (replace xo xf e)
-    | Mult (e1, e2) -> Mult (replace xo xf e1, replace xo xf e2)
-    |Plus (e1, e2) -> Plus (replace xo xf e1, replace xo xf e2)
-    |Minus(e1, e2) -> Minus (replace xo xf e1, replace xo xf e2)
-    |Ifz (e, e1, e2) -> Ifz (e, replace xo xf e1, replace xo xf e2)
-    |Eq (e1, e2) -> Eq (replace xo xf e1, replace xo xf e2)
-    | Cst c -> Cst c | Unit -> Unit *)
-
     let get_cons : e -> byte = function
         | App _ ->   APP
         | Succ _ ->  SUC

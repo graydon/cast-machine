@@ -1,0 +1,10 @@
+(* mutual tail recursive functions example *)
+(* wrong for now *)
+(* let rec f =
+    (fun n ->
+        if n then `true
+        else (snd (f (n-1)) % Bool),
+    fun n -> 
+    if n then `false
+    else (fst (f (n-1)) % ?))
+in fst (f 0);; *)

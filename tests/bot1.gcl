@@ -1,0 +1,3 @@
+let f : Bottom = fun x -> x in f 0;;
+
+(** 0 = 0 **)

@@ -8,7 +8,6 @@ module Bytecode_Eval_Apply = struct
 
     type mark = 
         | Static
-        | Result
         | Strict
 
     type kappa = tau * tau
@@ -38,10 +37,8 @@ module Bytecode_Eval_Apply = struct
               | UNI
               | MKP | FST | SND
               | LER of var (* letrec *)
-    (* [@@deriving eq,show] *)
 
     type bytecode = byte list
-    (* [@@deriving eq] *)
 end
 
 
@@ -50,8 +47,7 @@ module Print = struct
 
     let show_mark = function 
         | Static -> "*"
-        | Result -> "R"
-        | Strict -> "S"
+        | Strict -> "□"
 
     let show_kappa (t1, t2) = 
         Printf.sprintf "<%s, %s>" (pp_tau t1) (pp_tau t2)

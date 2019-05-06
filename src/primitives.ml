@@ -34,6 +34,10 @@ let pred = CD.Intervals.V.pred
 
 let enter_type = CD.Typer.enter_type
 
+let show_arr (_,arr) = 
+      List.map (fun l -> List.map (fun (a,b) -> Printf.printf "%s, %s\n" 
+      (CD.Types.Print.string_of_type a) (CD.Types.Print.string_of_type b)) l) arr
+
 (*apply prims*)
 let get = CD.Types.Arrow.get
 let apply = CD.Types.Arrow.apply
@@ -44,18 +48,19 @@ let need_arg = CD.Types.Arrow.need_arg
 (* a check is done to see if possible (List.exists on arrows) *)
 let app tapp targ = 
   let (dom,arr) = get tapp in 
+  if not (subtype targ dom) then empty
+  else 
+  (* let () = print_endline "debug" in
+  let _ = show_arr (dom,arr) in  *)
   if need_arg (dom,arr) then apply (dom,arr) targ
   else apply_noarg (dom,arr)
 
 let teg (_,arr) =
   List.fold_left (fun cup_acc l -> 
     let cap_arr = List.fold_left (fun cap_acc (s,t) -> cap cap_acc (mk_arrow s t)) any l
-    in cup cup_acc cap_arr) empty arr 
+    in cup cup_acc cap_arr) empty arr
+
     
-
-
-
-
 
 exception Expression_Syntax_Error
 exception Type_Syntax_Error of string

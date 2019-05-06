@@ -9,6 +9,7 @@
 
 /* Token declarations. */
 
+%token CAP CUP QMARK
 %token UNIT
 %token DOT COLON COMMA BACKTICK
 %token PAROPEN PARCLOSE
@@ -183,8 +184,16 @@ pat_const:
 	 		{ parse_cst c }
 
 pat:
+	| QMARK
+		{ qmark () }
 	| t1=pat ARROW t2=pat
 		{ mk_arrow t1 t2 }
+	| t1=pat CUP t2=pat
+		{ cup t1 t2 }
+	| t1=pat CAP t2=pat
+		{ cap t1 t2 }
+	| PAROPEN t=pat PARCLOSE
+		{ t }
 	| BACKTICK id=IDENT
 		{ parse_t ("`" ^ id) } 
 	| t=PAT    			    

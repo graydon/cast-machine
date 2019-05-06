@@ -1,5 +1,7 @@
-(* TODO : FIX THE PARSER FOR THIS KIND OF PROBLE: *)
-
+(* TODO : FIX THE PARSER FOR THIS KIND OF PROBLEM *)
+(* 
 let f : Int -> Int = fun x -> x in (f % (Int->Int));;
+*)
+
 
 

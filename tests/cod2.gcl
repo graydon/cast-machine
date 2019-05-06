@@ -1,6 +1,5 @@
 let fl : ? -> ? = fun x -> x in
 let flc = fl % (? -> Int) % (? -> ?) % (? -> Bool) in
-let flb : Bool -> Bool = fun x -> x in
-flb (flc (42 % ?));;
+flc 42;;
 
 (** Fail **)

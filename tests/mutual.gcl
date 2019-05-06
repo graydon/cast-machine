@@ -1,0 +1,15 @@
+(* using a combinator *)
+(* wrong for the moment *)
+(*
+let self_app = fun x -> x x in
+let combi = fun f ->
+    self_app (fun x -> f (fun y -> (x x) y)) 
+in
+let f = fun g ->
+    (fun n -> if n then 0
+    else (fst g) (n-1),
+    fun n -> if n then 1
+    else g (n-1))
+in 
+let f_rec = combi f
+in (fst f_rec) 10;; *)

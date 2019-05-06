@@ -11,19 +11,17 @@ CDUCE_LIB_DIR="`ocamlfind query cduce`"
 
 native:
 	dune build repl.bc $(FLAGS)
-	if [ -e "${repl_bc}" ]; then\
+	if [ -e ${repl_bc} ]; then\
 		ln -f "${repl_bc}" "${CURDIR}/bin/repl.bc";\
 	fi
 
 
-build:
+build: native
 	@echo "If this fails due to camlp4lib, try deleting the directory"
 	@echo "'.opam/<switch>/lib/cduce/+camlp4' and running 'make fix_linking' as root"
 	dune build repl.exe $(FLAGS)
 	chmod +x cast.exe
-	if [ -e "${repl_exe}" ]; then\
-		ln -f "${repl_exe}" "${CURDIR}/bin/repl.exe";\
-	fi
+	cp _build/default/repl.exe bin
 	@echo ""
 	@echo "Build finished. You can now start ./cast.exe"
 

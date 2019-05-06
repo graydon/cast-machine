@@ -66,7 +66,7 @@ let blank           = [' ' '\009' '\012']
 let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
 let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|";") ' '*
 (*items: strings, atoms, typevars, intervals *)
-let ppcst						= (['?' '0'-'9' '_']|"--")+			
+let ppcst						= (['0'-'9' '_']|"--")+			
 (* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
 let ppvar           = ('\'') ['0'-'9' 'A'-'Z' 'a'-'b' '_']+
 let ppstr 					= '"' ("\t" | "\n" | ['=' '-' '>' '<' '+' 'A'-'Z' 'a'-'z' ' ' '0'-'9' '\'' '_'])* '"'
@@ -95,7 +95,10 @@ rule token = parse
 	| "()"						{ UNIT }
 	| "->"						{ ARROW }
 	| "`"							{ BACKTICK }
+	| "&"							{ CAP }
+	| "|"							{ CUP }
 	| '*'							{ TIMES }
+	| '?'							{ QMARK }
 	| '+'							{ PLUS }
 	| '-'							{ MINUS }
 	| '='							{ EQ }

@@ -47,7 +47,7 @@ module Exec_Eval_Apply = struct
     type state = bytecode * env * stack * dump
 
      let rec typeof_stack_value : stack_value -> t = function
-        | `CST b -> constant b
+        | `CST b -> cap (constant b) (t_dyn)
         | `CLS (_, _, _, (t1, _), _) -> t1
         | `PAIR (v1, v2) -> 
             let t1 = typeof_stack_value v1 in
@@ -79,7 +79,7 @@ module Exec_Eval_Apply = struct
             Printf.sprintf ": %s = %s" (pp_tau (constant b)) (pp_b b)
         | `CLS (v, btc, _, _,_) -> 
             Printf.sprintf ": %s -> %s = <fun>" (pp_var v) (show_bytecode 2 btc)
-        | `FAIL -> "Fail"
+        | `FAIL -> ": Fail"
         | `PAIR (v1, v2) as v -> 
             Printf.sprintf ": %s = (%s, %s)" (pp_tau @@ typeof_stack_value v)
             (show_stack_value v1) (show_stack_value v2) 
@@ -320,6 +320,17 @@ module Exec_Eval_Apply = struct
                 !ref_state
         end
 
+        (* parameter functions *)
+        let compose : kappa -> kappa -> kappa = 
+        fun (t1,t2) (t3,t4) -> ((cap t1 t3), (cap t2 t4))
+
+        let dump : kappa -> dump -> dump = fun k -> function
+        | [] -> [Boundary k]
+        | Boundary k' :: d' -> Boundary (compose k k') :: d'
+        | (Frame _ :: _) as d -> Boundary k :: d
+
+        (* let cast : v -> kappa   *)
+
         let run code env = 
             let rec aux : state -> state = fun state ->
             let state = run_procedures state in 
@@ -349,25 +360,18 @@ module Exec_Eval_Apply = struct
                     let () = Env.replace e' x v in
                     aux (c', e', s, Frame (c, e) :: d)
 
-                | APP :: c, e,  v :: `CLS (x, c', e', ((t1, _) as k), Result) :: s, d ->
+                | APP :: c, e,  v :: `CLS (x, c', e', ((t1, t2) as k), Strict) :: s, d ->
                     let t' = result t1 (typeof_stack_value v) in
-                    aux (APP :: CAS :: c, e, 
-                        v :: `CLS (x, c', e', k, Static) :: `TYP (t', dom t') :: s, d)
-
-                | APP :: c, e,  v :: `CLS (x, c', e', ((_, t2) as k), Strict) :: s, d ->
-                    aux (CAS :: APP :: c, e, 
-                        v :: `TYP (t2, dom t2) :: `CLS (x, c', e', k, Result) :: s, d)
+                    aux (CAS :: APP :: CAS :: c, e, 
+                        v :: `TYP (t2, dom t2) :: `CLS (x, c', e', k, Static) :: `TYP (t', dom t') :: s, d)
 
                 | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
                     let () = Env.replace e' x v in
                     aux (c', e', s, d)
 
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((t1,_) as k), Result) :: s, d ->
+                | TAP :: c, e,  v :: `CLS (x, c', e', ((t1,t2) as k), Strict) :: s, d ->
                     let t = result t1 (typeof_stack_value v) in
-                    aux (TCA (t,dom t) :: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
-
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((_, t2) as k), Strict) :: s, d ->
-                    aux (CAS :: TAP :: c, e, v :: `TYP (t2,dom t2) :: `CLS (x, c', e', k, Result) :: s, d)
+                    aux (CAS :: TCA (t,dom t) :: c, e, v :: `TYP (t2,dom t2) :: `CLS (x, c', e', k, Static) :: s, d)
 
                 | RET :: c, e, v :: s, Boundary k :: d ->
                     aux (CAS :: RET :: c, e, v :: `TYP k :: s, d) 
@@ -379,33 +383,31 @@ module Exec_Eval_Apply = struct
                 (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
                     aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
 
-                | TCA (t1,t2) :: _, _, v :: `CLS (x, c', e', _, Static) :: s, Boundary (t1',t2') :: d ->
+                | TCA k::_, _, v::`CLS (x,c',e',_,Static)::s, d ->
                     let () = Env.replace e' x v in
-                    aux (c', e', s, Boundary (cap t1 t1',cap t2 t2') :: d)
+                    aux (c', e', s, dump k d)
 
-                | TCA k :: _, _, v :: `CLS (x, c', e', _, Static) :: s, d ->
-                    let () = Env.replace e' x v in
-                    aux (c', e', s, Boundary k :: d)
-
-                | TCA (t1,t2) :: c, e, v :: `CLS (x, c', e', ((t1', _) as k), Result) :: s, d ->
-                    let t = result t1' (typeof_stack_value v) in
+                | TCA k :: c, e, v :: `CLS (x,c',e',(t1, t2), Strict) :: s, d ->
+                    let t = result t1 (typeof_stack_value v) in
                     let domt = dom t in
-                    aux (TCA (cap t1 t, cap t2 domt):: c, e, v :: `CLS (x, c', e', k, Static) :: s, d)
-
-                | TCA k :: c, e, v :: `CLS (x, c', e', ((_, t2') as k'), Strict) :: s, d ->
-                    aux (CAS :: TCA k :: c, e, v :: `TYP (t2',dom t2') :: `CLS (x, c', e', k', Result) :: s, d)
+                    aux (CAS::TCA (compose k (t, domt)):: c, e, v::`TYP (t2,dom t2)::`CLS (x,c',e',k,Static) :: s, d)
 
                 | CAS :: c, e, `CST b :: `TYP (t,_) :: s, d ->
                     if subtype (constant b) (ceil t) 
                     then aux (c, e, `CST b :: s, d)
                     else aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
                     
-                | CAS :: c, e, `CLS (x, c', e', (t1,t2), m) :: `TYP (t1',t2') :: s, d ->
+                | CAS :: c, e, `CLS (x, c', e', (t1,t2), _) :: `TYP (t1',t2') :: s, d ->
                     if is_bottom t2' then 
                     aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
                     else
+                    (* let () = print_endline "debug time" in
+                    let () = print_endline (pp_tau t1) in
+                    let () = print_endline (pp_tau t1') in
+                    let () = print_endline (pp_tau (cap t1 t1')) in
+                    let () = print_endline (pp_tau (cup t1 t1')) in *)
                     let k = (cap t1 t1', cap t2 t2') in
-                    aux (c, e, `CLS (x, c', e', k, m) :: s, d)
+                    aux (c, e, `CLS (x, c', e', k, Strict) :: s, d)
 
                 | LET x :: c, e, v :: s, d ->
                     let () = Env.add e x v  in
