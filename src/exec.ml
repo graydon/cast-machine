@@ -3,59 +3,70 @@ open Utils
 open Bytecode
 open Types
 open Types.Print
-open Bytecode.Print
+open Bytecode_Eager
+open Syntax.Eager
 
-module Exec_Eval_Apply = struct
-    open Bytecode_Eval_Apply
+module Env = struct 
+    include Hashtbl.Make(struct 
+        type t = var
+        let equal = (=)
+        let hash = Hashtbl.hash
+    end)
+end
 
-    module Env = struct 
-        include Hashtbl.Make(struct 
-            type t = var
-            let equal = (=)
-            let hash = Hashtbl.hash
-        end)
-    end
+module type Structures = sig 
+    type result
+    type stack_item
+    type stack
+    type dump
+    type env
+    type state = bytecode * env * stack * dump
+    type nu 
+    val empty_env : env
+    val typeof : stack_item -> tau
+end
+
+module Make_Machine (B : Bytecode) = struct
+    open B
 
     type result = [
         | `CST of b
         | `Fail ]
         
-    and stack_value = 
+    and stack_item = 
         [ `CST of b
         | `CLS of var * bytecode * env * kappa * mark
         | `TYP of kappa
         | `FAIL
-        | `PAIR of stack_value * stack_value
+        | `PAIR of stack_item * stack_item
         ]
-    and env = stack_value Env.t
+    and env = stack_item Env.t
+    type stack = stack_item list
+
+    let empty_env : env = Env.create 0 
 
     (* machine values *)
     type nu = [
         | `CST of b
-        | `CLS of var * bytecode * env * kappa * mark
-    ]
-
-    let empty : env = Env.create 0 
-
-    type stack = stack_value list
-
+        | `CLS of var * bytecode * env * kappa * mark ]
+        
     type dump_item = 
         | Boundary of kappa
         | Frame    of bytecode * env
     type dump = dump_item list 
-
+    
     type state = bytecode * env * stack * dump
 
-     let rec typeof_stack_value : stack_value -> t = function
+    let rec typeof : stack_item -> t = function
         | `CST b -> cap (constant b) (t_dyn)
-        | `CLS (_, _, _, (t1, _), _) -> t1
-        | `PAIR (v1, v2) -> 
-            let t1 = typeof_stack_value v1 in
-            let t2 = typeof_stack_value v2 in pair t1 t2
+        | `CLS (_, _, _, k, _) -> let (t1,t2) = eval k in t1
+        | `PAIR (v1, v2) ->     
+            let t1 = typeof v1 in
+            let t2 = typeof v2 in pair t1 t2
         | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
 
     module Print = struct 
-        let rec show_stack_value : stack_value -> string = function
+        let rec show_stack_value : stack_item -> string = function
         | `CST b -> pp_b b
         | `CLS (v, btc, env, ts, m) -> 
             Printf.sprintf "C(%s, %s, %s, %s, %s)"
@@ -67,21 +78,21 @@ module Exec_Eval_Apply = struct
             Printf.sprintf "(%s, %s)" (show_stack_value v1)
             (show_stack_value v2)
 
-        and show_env_value : int -> stack_value -> string = 
+        and show_env_value : int -> stack_item -> string = 
         function
         | 2 -> show_stack_value  
         | 0 -> (fun _ -> "_")
         | 1 -> show_stack_value_1
         | _ -> failwith "wrong verbose argument"
 
-        and show_result : stack_value -> string = function
+        and show_result : stack_item -> string = function
         | `CST b -> 
             Printf.sprintf ": %s = %s" (pp_tau (constant b)) (pp_b b)
         | `CLS (v, btc, _, _,_) -> 
             Printf.sprintf ": %s -> %s = <fun>" (pp_var v) (show_bytecode 2 btc)
         | `FAIL -> ": Fail"
         | `PAIR (v1, v2) as v -> 
-            Printf.sprintf ": %s = (%s, %s)" (pp_tau @@ typeof_stack_value v)
+            Printf.sprintf ": %s = (%s, %s)" (pp_tau @@ typeof v)
             (show_stack_value v1) (show_stack_value v2) 
         | _ -> failwith "not a return value"
 
@@ -105,7 +116,7 @@ module Exec_Eval_Apply = struct
             (String.concat "\n\t   "
             (List.map show_dump_item d))
 
-        and show_stack_value_1 : stack_value -> string = function
+        and show_stack_value_1 : stack_item -> string = function
         | `CST b -> pp_b b
         | `CLS (x,_,env,bnd,_) -> Printf.sprintf "C(%s,...,%s, %s)" 
             (pp_var x) (show_env 0 true env) 
@@ -126,7 +137,6 @@ module Exec_Eval_Apply = struct
             Printf.sprintf "[ %s ]" 
             (String.concat "\n\t     "
             (List.map show_stack_val s))
-
     end
 
     module MetricsDebug = struct 
@@ -290,8 +300,6 @@ module Exec_Eval_Apply = struct
     module Transitions = struct
         open MetricsDebug
 
-       
-
         exception Machine_Stack_Overflow
 
         let run_check run_params (_, _, s, _) =
@@ -321,8 +329,9 @@ module Exec_Eval_Apply = struct
         end
 
         (* parameter functions *)
-        let compose : kappa -> kappa -> kappa = 
-        fun (t1,t2) (t3,t4) -> ((cap t1 t3), (cap t2 t4))
+        let compose : kappa -> kappa -> kappa = fun k1 k2 ->
+            let (t1,t2) = eval k1 in 
+            let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
 
         let dump : kappa -> dump -> dump = fun k -> function
         | [] -> [Boundary k]
@@ -360,18 +369,20 @@ module Exec_Eval_Apply = struct
                     let () = Env.replace e' x v in
                     aux (c', e', s, Frame (c, e) :: d)
 
-                | APP :: c, e,  v :: `CLS (x, c', e', ((t1, t2) as k), Strict) :: s, d ->
-                    let t' = result t1 (typeof_stack_value v) in
+                | APP :: c, e,  v :: `CLS (x, c', e', k, Strict) :: s, d ->
+                    let kr = mk_app k (typeof v) in 
+                    let kd = mk_dom k in 
                     aux (CAS :: APP :: CAS :: c, e, 
-                        v :: `TYP (t2, dom t2) :: `CLS (x, c', e', k, Static) :: `TYP (t', dom t') :: s, d)
+                        v :: `TYP kd :: `CLS (x, c', e', k, Static) :: `TYP kr :: s, d)
 
                 | TAP :: _, _,  v :: `CLS (x, c', e', _, Static) :: s, d ->
                     let () = Env.replace e' x v in
                     aux (c', e', s, d)
 
-                | TAP :: c, e,  v :: `CLS (x, c', e', ((t1,t2) as k), Strict) :: s, d ->
-                    let t = result t1 (typeof_stack_value v) in
-                    aux (CAS :: TCA (t,dom t) :: c, e, v :: `TYP (t2,dom t2) :: `CLS (x, c', e', k, Static) :: s, d)
+                | TAP :: c, e,  v :: `CLS (x, c', e', k, Strict) :: s, d ->
+                    let kr = mk_app k (typeof v) in
+                    let kd = mk_dom k in  
+                    aux (CAS :: TCA kr :: c, e, v :: `TYP kd :: `CLS (x, c', e', k, Static) :: s, d)
 
                 | RET :: c, e, v :: s, Boundary k :: d ->
                     aux (CAS :: RET :: c, e, v :: `TYP k :: s, d) 
@@ -381,33 +392,35 @@ module Exec_Eval_Apply = struct
 
                 (* this shouldn't happen as creating a fail terminates execution *)
                 (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d) *)
+                    aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d) *)
 
                 | TCA k::_, _, v::`CLS (x,c',e',_,Static)::s, d ->
                     let () = Env.replace e' x v in
                     aux (c', e', s, dump k d)
 
-                | TCA k :: c, e, v :: `CLS (x,c',e',(t1, t2), Strict) :: s, d ->
-                    let t = result t1 (typeof_stack_value v) in
-                    let domt = dom t in
-                    aux (CAS::TCA (compose k (t, domt)):: c, e, v::`TYP (t2,dom t2)::`CLS (x,c',e',k,Static) :: s, d)
+                | TCA k :: c, e, v :: `CLS (x,c',e',k',Strict) :: s, d ->
+                    let kr = mk_app k' (typeof v) in
+                    let kd = mk_dom k in
+                    aux (CAS::TCA (compose k kr):: c, e, v::`TYP kd::`CLS (x,c',e',k',Static) :: s, d)
 
-                | CAS :: c, e, `CST b :: `TYP (t,_) :: s, d ->
+                | CAS :: c, e, `CST b :: `TYP k :: s, d ->
+                    let (t,_) = eval k in
                     if subtype (constant b) (ceil t) 
                     then aux (c, e, `CST b :: s, d)
-                    else aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
+                    else aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d)
                     
-                | CAS :: c, e, `CLS (x, c', e', (t1,t2), _) :: `TYP (t1',t2') :: s, d ->
+                | CAS :: c, e, `CLS (x,c',e',k,_) :: `TYP k':: s, d ->
+                    let (_,t2') = eval k' in
                     if is_bottom t2' then 
-                    aux ([], empty, `FAIL :: s, Frame (c, e) :: d)
+                    aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d)
                     else
                     (* let () = print_endline "debug time" in
                     let () = print_endline (pp_tau t1) in
                     let () = print_endline (pp_tau t1') in
                     let () = print_endline (pp_tau (cap t1 t1')) in
                     let () = print_endline (pp_tau (cup t1 t1')) in *)
-                    let k = (cap t1 t1', cap t2 t2') in
-                    aux (c, e, `CLS (x, c', e', k, Strict) :: s, d)
+                    let kc = compose k k' in
+                    aux (c, e, `CLS (x, c', e', kc, Strict) :: s, d)
 
                 | LET x :: c, e, v :: s, d ->
                     let () = Env.add e x v  in
@@ -456,7 +469,7 @@ module Exec_Eval_Apply = struct
 
             in aux (code, env, [], [])
     
-        (* let print_value : stack_value -> unit = function
+        (* let print_value : stack_item -> unit = function
             | `CST c -> Print.print_e (Cst c)
             | `BTC _ | `ENV _ -> failwith "wrong type of return value on stack"
             | `CLS (x,_,_,_) -> Printf.printf "fun %s -> code and env" (Print.pp_var x)
@@ -518,5 +531,7 @@ module Exec_Eval_Apply = struct
                 print_endline "\n=============\n=============";
                 run_params.metrics <- init_metrics ()
                 end
-
 end
+
+module Machine = Make_Machine(Bytecode_Eager)
+module Machine_Symbolic = Make_Machine(Bytecode_Symbolic)

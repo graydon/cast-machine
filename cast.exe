@@ -1,4 +1,4 @@
 #! /bin/sh
 
 # rlwrap -a ./bin/repl.exe "$@" 
-rlwrap -a ocamlrun ./bin/repl.bc "$@" 
+rlwrap -a ./main.native "$@" 

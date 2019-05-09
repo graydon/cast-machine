@@ -9,5 +9,5 @@
     (name repl)
     (link_flags -linkall)
     (libraries cast)
-    (modes byte)
+    ; (modes byte)
     (modules repl))

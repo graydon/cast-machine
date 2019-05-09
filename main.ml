@@ -1,6 +1,5 @@
 open Interpreter.Eager_Calculus
-open Exec.Exec_Eval_Apply
-open Compile.Compile_Eval_Apply
+(* open Compile.Compile_Eval_Apply *)
 open Primitives
 open Errors
 open Lexing
@@ -31,10 +30,21 @@ let eval_with_parameters params e =
   then (print_string "Program: "; print_e e; print_endline "") in
   if !(params.machine) != "" then
   begin
+    if !(params.symbolic) != "" then 
+      let open Exec.Machine_Symbolic in 
+      let open Compile.Compile_Symbolic in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
       let btc = compile e in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
-      wrap_run btc params
+      wrap_run btc params end
+    else 
+      let open Exec.Machine in 
+      let open Compile.Compile in begin
+      let () = if !(params.debug) then print_endline "Compiling.." in
+      let btc = compile e in
+      let () = if !(params.debug) then print_endline "Running bytecode.." in
+      wrap_run btc params end
+
   end
   else if !(params.abstract) then wrap_abstract e
   else wrap_eval e

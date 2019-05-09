@@ -74,7 +74,7 @@ module type Cast_Expr = sig
 		| Eol
 end
 
-module Make_SE (Init_Type : Gradual_Type) : (Cast_Expr 
+module Make_Expr (Init_Type : Gradual_Type) : (Cast_Expr 
   with type castkind := Init_Type.tau * Init_Type.tau) = 
 struct
     include Init_Type
@@ -113,7 +113,7 @@ struct
 end
 
 module Eager = struct 
-  include Make_SE(CDuce_Gradual_Types)
+  include Make_Expr(CDuce_Gradual_Types)
   
   module Print = struct
         let pprint_p = function 

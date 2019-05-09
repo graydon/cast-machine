@@ -18,9 +18,9 @@ main_byte:
 
 web:
 	ocamlbuild -use-menhir -use-ocamlfind \
-	-tag-line "not (<**/parser.*>): package(js_of_ocaml), package(js_of_ocaml.syntax), syntax(camlp4o)" \
-	-cflags '-I '`pwd`/../cduce/lib/ \
-	-lflags '-I '`pwd`'/../cduce/lib/ 'cduce_lib.cma web.byte
+	-tag-line "not (<**/parser.*>): package(js_of_ocaml), package(js_of_ocaml-ppx)" \
+	-cflags '-I '${CDUCE} \
+	-lflags '-I '${CDUCE}' 'cduce_lib.cma web.byte \
 	js_of_ocaml +nat.js +dynlink.js +toplevel.js +weak.js web.byte
 
 dune:

@@ -1,0 +1,4 @@
+let rec f = fun x -> (f x) % ? in 
+f 0;;
+
+(** Hangs **)

@@ -2,11 +2,17 @@
 
 files=$(ls ./tests)
 count=0
+hangmode=0
 
 for f in ${files}; do
     echo "testing $f"
 
     out="$(cat "tests/$f" | grep "(\*\*" | awk '{$1="";$NF=""; print $0}')"
+
+    if [ "$out" = " Hangs " ]; then
+        hangmode=1
+    fi
+    
     if [ "$out" ]; then
         out="- :$out"
     else 
@@ -14,8 +20,32 @@ for f in ${files}; do
     fi
     echo "expected output:"
     echo "{${out}}"
+    
+    if (( hangmode == 1 )); then
+        echo "cannot test hanging programs yet"
+        hangmode=0
+        sleep 1
+        continue
+        # ./run.sh 5 ./cast.exe --load "./tests/$f" &
+        # status=$?
 
-    rout="$(./cast.exe --load "./tests/$f") "
+        # if (( status == 124 )); then
+        #     echo "hung program as expected"
+        #     hangmode=0
+        #     echo "success"
+        #     count=$((count+1))
+        #     continue
+
+        # else
+        #     echo "error: program should hang"
+        #     echo "terminating test session"
+        #     exit
+        # fi
+    fi
+
+    # if the program should not hang
+    rout="$(./cast.exe --load "./tests/$f" "$@") "
+
     echo "computed output:"
     echo "{${rout}}"
 
