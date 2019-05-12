@@ -1,4 +1,5 @@
 open Primitives
+open Benchmark
 
 type t = CD.Types.t
 type var = CD.Var.t
@@ -6,22 +7,6 @@ type varset = CD.Var.Set.t
 type subst = CD.Types.Subst.t
 type b = CD.Types.const
 type tau = CD.Types.t
-
-let fresh_var () =
-  let n = Oo.id (object end) in
-  CD.Var.mk ~internal:false (Printf.sprintf "a%04d" n)
-
-let fresh_dyn_id () =
-  let n = Oo.id (object end) in
-  Printf.sprintf "'d%04d" n
-
-let fresh_dyn_var () =
-  let n = Oo.id (object end) in
-  CD.Var.mk ~internal:false (Printf.sprintf "d%04d" n)
-
-let fresh_dyn () = var (fresh_dyn_var ())
-
-let fresh_var_type () = CD.Types.var (fresh_var ())
 
 module Print = struct 
     let pprint_t t = 
@@ -52,8 +37,16 @@ let env = CD.Builtin.env
 let mk_ident = CD.Ident.U.mk
 let ns_empty = CD.Ns.empty
 
+(* let _ = List.map 
+  (fun (n,t) -> 
+    let n = (CD.Ns.empty, CD.Ident.U.mk n) in
+      (* CD.Types.Print.register_global "" n t; *)
+      CD.Typer.enter_type (CD.Ident.ident n) t env)
+  Benchmark.builtins *)
+
 (* qmark type *)
-let v_dyn = fresh_dyn_var ()
+let s_dyn = fresh_dyn_id ()
+let v_dyn = CD.Var.mk ~internal:false s_dyn
 let t_dyn = var v_dyn
 
 (* let n = (ns_empty, mk_ident "Dyn")
@@ -64,6 +57,10 @@ let t_bot = mk_atom "Bottom"
 
 let n = (ns_empty, mk_ident "Bottom")
 let env = enter_type (CD.Ident.ident n) t_bot env
+
+(* add my builtins *)
+let env = List.fold_left 
+  (fun e s -> add_typedefs e s) env builtins 
 
 let is_bottom t = equal t t_bot
 
@@ -84,7 +81,7 @@ let dom t =
 let parse_t str = 
     try 
     str |> Str.global_substitute (Str.regexp_string "?")
-            (fun _ -> " " ^ fresh_dyn_id () ^ " ") 
+            (fun _ -> "'" ^ s_dyn ^ " ") 
         |> Stream.of_string |> CD.Parser.pat 
         |> CD.Typer.typ env |> CD.Types.descr
     with _ -> raise (Type_Syntax_Error str)
@@ -96,6 +93,9 @@ let parse_cst str =
             |> CD.Compile.compile_eval_expr CD.Compile.empty_toplevel
             |> CD.Value.inv_const
         with _ -> raise Expression_Syntax_Error
+(* 
+let parse_typedecl s = 
+  try  *)
 
 (* some types *)
 let t_arr = parse_t "Arrow"

@@ -1,5 +1,4 @@
 open Syntax
-open Primitives
 open Types
 open Types.Print
 open Syntax.CDuce_Gradual_Types
@@ -21,7 +20,7 @@ module Pair : Cast_Representation = struct
     let eval = fun x -> x
     let mk_kappa = fun x -> x
     let mk_dom (_,t2) = (t2,dom t2)
-    let mk_app (t1,t2) t = let tr = result t1 t in (tr,dom tr) 
+    let mk_app (t1,_) t = let tr = result t1 t in (tr,dom tr) 
 end
 
 module Symbol : Cast_Representation = struct

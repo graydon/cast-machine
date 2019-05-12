@@ -1,6 +1,5 @@
 open Bytecode
 open Types
-open Primitives
 
 module Make_Compile (B : Bytecode) = struct
     open Syntax.Eager

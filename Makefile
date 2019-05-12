@@ -23,14 +23,6 @@ web:
 	-lflags '-I '${CDUCE}' 'cduce_lib.cma web.byte \
 	js_of_ocaml +nat.js +dynlink.js +toplevel.js +weak.js web.byte
 
-dune:
-	dune build ./repl.exe $(FLAGS)
-	if [ -e ${repl_bc} ]; then\
-		ln -f "${repl_bc}" "${CURDIR}/bin/repl.bc";\
-	fi
-
-top:
-	dune utop
 
 install: web
 	scp base.js jquery.js style.css web.js index.html \

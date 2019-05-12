@@ -1,10 +1,8 @@
 open Interpreter.Eager_Calculus
-(* open Compile.Compile_Eval_Apply *)
 open Primitives
 open Errors
 open Lexing
 open Utils
-(* open Abstract.Abstract *)
 let wrap_abstract = fun _ -> ()
 
 let () = if Array.length (Sys.argv) > 1 then begin

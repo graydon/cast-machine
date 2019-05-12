@@ -60,6 +60,22 @@ let teg (_,arr) =
     let cap_arr = List.fold_left (fun cap_acc (s,t) -> cap cap_acc (mk_arrow s t)) any l
     in cup cup_acc cap_arr) empty arr
 
+let fresh_var () =
+  let n = Oo.id (object end) in
+  CD.Var.mk ~internal:false (Printf.sprintf "a%04d" n)
+
+let fresh_dyn_id () =
+  let n = Oo.id (object end) in
+  Printf.sprintf "'d%04d" n
+
+let fresh_dyn_var () =
+  let n = Oo.id (object end) in
+  CD.Var.mk ~internal:false (Printf.sprintf "d%04d" n)
+
+let fresh_dyn () = var (fresh_dyn_var ())
+
+let fresh_var_type () = CD.Types.var (fresh_var ())
+
     
 
 exception Expression_Syntax_Error

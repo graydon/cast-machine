@@ -59,7 +59,7 @@ module Make_Machine (B : Bytecode) = struct
 
     let rec typeof : stack_item -> t = function
         | `CST b -> cap (constant b) (t_dyn)
-        | `CLS (_, _, _, k, _) -> let (t1,t2) = eval k in t1
+        | `CLS (_, _, _, k, _) -> let (t1,_) = eval k in t1
         | `PAIR (v1, v2) ->     
             let t1 = typeof v1 in
             let t2 = typeof v2 in pair t1 t2

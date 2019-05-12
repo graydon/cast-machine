@@ -10,16 +10,18 @@
 /* Token declarations. */
 
 %token CAP CUP QMARK
+%token STREAM
 %token UNIT
 %token DOT COLON COMMA BACKTICK
 %token PAROPEN PARCLOSE
 %token MOD FUN ARROW REC TIMES PRED SUCC FST SND
+%token BRACKOPEN BRACKCLOSE
 
 
 %token <string> IDENT
 %token <string> PAT 
 %token EOL ENDEXPR
-%token LET EQ IN AND
+%token LET EQ IN 
 %token IF THEN ELSE PLUS MINUS 
 
 %left IN
@@ -183,9 +185,21 @@ pat_const:
 	| c=PAT
 	 		{ parse_cst c }
 
+pat_list:
+	| p=PAT
+		{ p }
+	| p=PAT ps=pat_list
+		{ p ^ ps }
+
 pat:
+	| BRACKOPEN ps=pat_list BRACKCLOSE
+		{ parse_t ("[" ^ ps ^ "]") }
+	| STREAM t=PAT
+		{ parse_t ("Stream" ^ t) }
 	| QMARK
 		{ qmark () }
+	| UNIT 
+		{ parse_t "[]" }
 	| t1=pat ARROW t2=pat
 		{ mk_arrow t1 t2 }
 	| t1=pat CUP t2=pat

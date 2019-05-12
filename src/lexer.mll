@@ -1,6 +1,5 @@
 (* This file was copied from Tommaso's setvariants *)
 
-
 {
 
 	open Lexing
@@ -32,7 +31,7 @@ let trim_dollar s =
 			("succ", 				SUCC);
 			("fst", 				FST);
 			("snd", 				SND);
-			("and",					AND)
+			(* ("and",					AND) *)
 			]
 
 	let filter_id id =
@@ -78,13 +77,14 @@ let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Namespaces"|"Abstract"
 										|"Caml_int"|"In_channel"
 										|"Out_channel"|"Bottom"
+let ppfunvar				= "Stream" ' '* '(' ppitem ')' 
 (*delimiters: parenthesis, brackets, braces *)
 let dopen 					= ['(' '[' '{']
 let dclose 					= [')' ']' '}']
 let ppitems 				= (dopen ' '* ppitem ' '* dclose) | ppitem
 let ppatoms					= (dopen ppitems struct ppitems dclose)
 										| (ppitems struct ppitems) | ppitems
-let pat 						= ppatoms | (ppatoms | (dopen+ ppatoms dclose*)) (struct (dopen* ppatoms dclose*))+
+let pat 						= ppfunvar | ppatoms | (ppatoms | (dopen+ ppatoms dclose*)) (struct (dopen* ppatoms dclose*))+
 let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
 
 rule token = parse
@@ -97,6 +97,8 @@ rule token = parse
 	| "`"							{ BACKTICK }
 	| "&"							{ CAP }
 	| "|"							{ CUP }
+	| "["							{ BRACKOPEN }
+	| "]"							{ BRACKCLOSE }
 	| '*'							{ TIMES }
 	| '?'							{ QMARK }
 	| '+'							{ PLUS }
