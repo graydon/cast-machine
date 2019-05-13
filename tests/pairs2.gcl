@@ -1,0 +1,8 @@
+let make_stream = fun hd thunk -> (hd, thunk) in
+let stream_first st = fst st in
+let stream_rest st = (snd st) () in
+let rec count_from n = 
+    make_stream n (fun () -> count_from (n+1)) 
+in stream_first (count_from 10);;
+
+(** 10 = 10 **)

@@ -7,16 +7,14 @@ hangmode=0
 for f in ${files}; do
     echo "testing $f"
 
-    out="$(cat "tests/$f" | grep "(\*\*" | awk '{$1="";$NF=""; print $0}')"
+    out="$(string="$(cat ./tests/$f | grep "(\*\*")" && echo "${string:4:-4}")"
 
-    if [ "$out" = " Hangs " ]; then
+    if [ "$out" = "Hangs" ]; then
         hangmode=1
     fi
     
     if [ "$out" ]; then
-        out="- :$out"
-    else 
-        out=" "
+        out="- : $out"
     fi
     echo "expected output:"
     echo "{${out}}"
@@ -44,7 +42,7 @@ for f in ${files}; do
     fi
 
     # if the program should not hang
-    rout="$(./cast.exe --load "./tests/$f" "$@") "
+    rout="$(./cast.exe --load "./tests/$f" "$@")"
 
     echo "computed output:"
     echo "{${rout}}"
@@ -57,6 +55,6 @@ for f in ${files}; do
         echo "terminating test session"
         exit
     fi
-
-    echo "all ${count} tests succeeded"
 done
+
+echo "all ${count} tests succeeded"
