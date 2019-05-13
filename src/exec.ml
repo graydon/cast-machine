@@ -42,13 +42,15 @@ module Make_Machine (B : Bytecode) = struct
         ]
     and env = stack_item Env.t
     type stack = stack_item list
+    
 
     let empty_env : env = Env.create 0 
 
     (* machine values *)
-    type nu = [
+    (* type nu = [
         | `CST of b
-        | `CLS of var * bytecode * env * kappa * mark ]
+        | `CLS of var * bytecode * env * kappa * mark
+        | `PAIR of nu * nu ] *)
         
     type dump_item = 
         | Boundary of kappa
@@ -65,6 +67,39 @@ module Make_Machine (B : Bytecode) = struct
             let t2 = typeof v2 in pair t1 t2
         | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
 
+      (* parameter functions *)
+        let compose : kappa -> kappa -> kappa = fun k1 k2 ->
+            let (t1,t2) = eval k1 in 
+            let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
+
+        let dump : kappa -> dump -> dump = fun k -> function
+        | [] -> [Boundary k]
+        | Boundary k' :: d' -> Boundary (compose k k') :: d'
+        | (Frame _ :: _) as d -> Boundary k :: d
+
+
+    let rec applycast : stack_item -> kappa -> stack_item = fun v k ->
+        let (t,td) = eval k in 
+        begin match v with 
+        | `CST b -> if subtype (constant b) (ceil t) then `CST b
+            else `FAIL
+        | `PAIR (v1, v2) -> 
+            let t1, t2 = pi1 t, pi2 t in
+            let k1, k2 = mk_kappa (t1,dom t1), mk_kappa (t2,dom t2) in  
+            let cv1 = applycast v1 k1  in
+            let cv2 = applycast v2 k2 in 
+            begin match cv1, cv2 with
+            | `FAIL, _ -> `FAIL
+            | _, `FAIL -> `FAIL
+            | _ -> `PAIR (cv1, cv2) end
+        | `CLS (x,c,e,k',m) ->
+            if td = t_bot then `FAIL
+            else let kc = compose k k' in
+            `CLS (x,c,e,kc,Strict)
+
+        | _ -> failwith "wrong object to be cast" end
+
+    
     module Print = struct 
         let rec show_stack_value : stack_item -> string = function
         | `CST b -> pp_b b
@@ -328,16 +363,7 @@ module Make_Machine (B : Bytecode) = struct
                 !ref_state
         end
 
-        (* parameter functions *)
-        let compose : kappa -> kappa -> kappa = fun k1 k2 ->
-            let (t1,t2) = eval k1 in 
-            let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
-
-        let dump : kappa -> dump -> dump = fun k -> function
-        | [] -> [Boundary k]
-        | Boundary k' :: d' -> Boundary (compose k k') :: d'
-        | (Frame _ :: _) as d -> Boundary k :: d
-
+      
         (* let cast : v -> kappa   *)
 
         let run code env = 
@@ -421,6 +447,12 @@ module Make_Machine (B : Bytecode) = struct
                     let () = print_endline (pp_tau (cup t1 t1')) in *)
                     let kc = compose k k' in
                     aux (c, e, `CLS (x, c', e', kc, Strict) :: s, d)
+                
+                | CAS :: c, e,  (`PAIR (_,_) as v) :: `TYP k:: s, d ->
+                    let v' = applycast v k in 
+                    begin match v' with
+                    | `FAIL -> aux ([], empty_env, `FAIL :: s, Frame (c,e) :: d)
+                    | _ -> aux (c, e, v' :: s, d) end
 
                 | LET x :: c, e, v :: s, d ->
                     let () = Env.add e x v  in
@@ -454,6 +486,9 @@ module Make_Machine (B : Bytecode) = struct
 
                 | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (add i1 i2)) :: s, d) 
+
+                | MOD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
+                    aux (c, e, `CST (Integer (i2 mod i1)) :: s, d) 
                 
                 | SUB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (sub i2 i1)) :: s, d) 

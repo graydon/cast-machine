@@ -65,7 +65,7 @@ module type Cast_Expr = sig
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e
-      | Mult of e * e | Plus of e * e | Minus of e * e
+      | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
       | Ifz of e * e * e
       | Eq of e * e
       | Unit
@@ -96,7 +96,7 @@ struct
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e 
-      | Mult of e * e | Plus of e * e | Minus of e * e
+      | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
       | Ifz of e * e * e
       | Eq of e * e
       | Unit
@@ -129,12 +129,15 @@ module Eager = struct
         
         let sprintf = Printf.sprintf
 
-        let rec pprint_e : e -> string = function
+        let rec pprint_e : e -> string = fun e ->
+            let rec aux offset = function
             | Unit -> "()"
             | Var var -> pp_var var
             | Cst b -> pp_b b
             | Pair (e1, e2) ->
                 Printf.sprintf "pair (%s, %s)" (pprint_e e1) (pprint_e e2)
+            | Mod (e1, e2) ->
+                Printf.sprintf "(%s mod %s)" (pprint_e e1) (pprint_e e2)
             | Fst e -> 
                 sprintf "fst %s" (pprint_e e)
             | Snd e -> 
@@ -145,14 +148,16 @@ module Eager = struct
             | Eq (e1, e2) ->
                 Printf.sprintf "%s = %s" (pprint_e e1) (pprint_e e2)
             | Ifz (cond, e1, e2) ->
-                Printf.sprintf "if %s then %s else %s"
-                    (pprint_e cond) (pprint_e e1) (pprint_e e2)
+                Printf.sprintf "%sif %s then %s%selse %s" 
+                    (if offset = "" then "\n\t" else offset)
+                    (pprint_e cond) (aux offset e1) 
+                    (if offset = "" then "\n\t" else "\n" ^ offset) (aux offset e2) 
             | Letrec (x,e1,e2) -> 
-                Printf.sprintf "let rec %s = %s in %s"
-                    (pp_var x) (pprint_e e1) (pprint_e e2)
+                Printf.sprintf "let rec %s = %s in\n%s"
+                    (pp_var x) (pprint_e e1) (aux "\t" e2)
             | Let (x, e1, e2) ->
-                Printf.sprintf "let %s = %s in %s"
-                    (pp_var x) (pprint_e e1) (pprint_e e2)
+                Printf.sprintf "let %s = %s in\n%s"
+                    (pp_var x) (pprint_e e1) (aux "\t" e2)
             | App (e1, e2) -> 
                 let s_format : _ format =
                     (match e2 with
@@ -176,6 +181,7 @@ module Eager = struct
                 Printf.sprintf "%s + %s" (pprint_e e1) (pprint_e e2)
             | Minus (e1, e2) ->
                 Printf.sprintf "%s - %s" (pprint_e e1) (pprint_e e2)
+        in aux "" e
             (* | `Prd (e1, e2) ->
                 Printf.sprintf "(%s, %s)" (pprint_e e1) (pprint_e e2)
             | `Pi1 e -> 

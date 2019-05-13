@@ -60,7 +60,7 @@ module type Bytecode = sig
             | CAS                     (* kappa *)
             | TCA of kappa              (* tailcast *)
             | RET
-            | SUC | PRE | MUL | ADD | SUB
+            | SUC | PRE | MUL | ADD | SUB | MOD
             | LET of var
             | END of var
             | EQB
@@ -96,7 +96,7 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
               | CAS                     (* kappa *)
               | TCA of kappa              (* tailcast *)
               | RET
-              | SUC | PRE | MUL | ADD | SUB
+              | SUC | PRE | MUL | ADD | SUB | MOD
               | LET of var
               | END of var
               | EQB
@@ -140,6 +140,7 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
             | LET v -> "LET " ^ (pp_var v)
             | END v -> "END " ^ (pp_var v)
             | EQB ->   "EQB"
+            | MOD -> "MOD"
             | IFZ (btc1, btc2) ->
                 begin match verb with
                 | 0 -> "IFZ"

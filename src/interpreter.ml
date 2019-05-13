@@ -128,6 +128,13 @@ module Eager_Calculus = struct
             | `Cst (Integer i1), `Cst (Integer i2) -> `Cst (Integer (mult i1 i2))
             | _ -> failwith "trying to multiply non-integers"
             end
+        | Mod (e1, e2) ->
+            let v1 = aux env e1 in
+            let v2 = aux env e2 in 
+            begin match v1, v2 with 
+            | `Cst (Integer i1), `Cst (Integer i2) -> `Cst (Integer (i1 mod i2))
+            | _ -> failwith "trying to modulo non-integers"
+            end
         | Minus (e1, e2) ->
             let v1 = aux env e1 in
             let v2 = aux env e2 in 

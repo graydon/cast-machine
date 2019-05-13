@@ -4,6 +4,7 @@ let zero = CD.Types.Integer CD.Intervals.V.zero
 let one = CD.Types.Integer (CD.Intervals.V.succ CD.Intervals.V.zero)
 let mult = CD.Intervals.V.mult
 let add = CD.Intervals.V.add
+let (mod) = CD.Intervals.V.modulo
 let sub = CD.Intervals.V.sub
 let var = CD.Types.var
 let any = CD.Types.any
@@ -66,7 +67,7 @@ let fresh_var () =
 
 let fresh_dyn_id () =
   let n = Oo.id (object end) in
-  Printf.sprintf "'d%04d" n
+  Printf.sprintf "d%04d" n
 
 let fresh_dyn_var () =
   let n = Oo.id (object end) in

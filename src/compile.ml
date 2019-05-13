@@ -11,6 +11,7 @@ module Make_Compile (B : Bytecode) = struct
         | Pred _ ->  PRE
         | Mult _ ->  MUL
         | Plus _ ->  ADD
+        | Mod _ -> MOD
         | Minus _ -> SUB
         | Eq _ ->    EQB
         | _ -> failwith "get_cons misuse"
@@ -29,7 +30,7 @@ module Make_Compile (B : Bytecode) = struct
         | Let (x, e1, e2) ->                 (compile e1) @ [LET x] @ (compile e2) @ [END x]
         | Letrec (f, e1, e2) ->              (rec_compile f e1) @ [LET f] @ (compile e2) @ [END f]
         | Ifz (cond, e1, e2) ->              (compile cond) @ [IFZ (compile e1, compile e2)]
-        | Mult  (e1,e2) | Plus (e1,e2)       
+        | Mult  (e1,e2) | Plus (e1,e2) | Mod (e1,e2)     
         | Minus (e1,e2) | Eq (e1,e2) as e -> (compile e1) @ (compile e2) @ [get_cons e]
         | Unit ->                            [UNI]
         

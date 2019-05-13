@@ -14,7 +14,7 @@
 %token UNIT
 %token DOT COLON COMMA BACKTICK
 %token PAROPEN PARCLOSE
-%token MOD FUN ARROW REC TIMES PRED SUCC FST SND
+%token CAST FUN ARROW REC TIMES PRED SUCC FST SND
 %token BRACKOPEN BRACKCLOSE
 
 
@@ -22,14 +22,14 @@
 %token <string> PAT 
 %token EOL ENDEXPR
 %token LET EQ IN 
-%token IF THEN ELSE PLUS MINUS 
+%token IF THEN ELSE PLUS MINUS MOD
 
 %left IN
 %left PLUS MINUS EQ
 %left IDENT
 %nonassoc PARCLOSE ELSE FUN
 %left TIMES 
-%nonassoc MOD
+%nonassoc CAST
 %nonassoc PAT PAROPEN
 %left SUCC PRED
 
@@ -65,14 +65,14 @@ expr:
 			{ f }
 	| p=pair 
 			{ p }
-	| e=expr MOD t=pat
+	| e=expr CAST t=pat
 			{ Cast (e, (t, dom t)) }
 	| b=binop  
 			{ b }
 	| l=let_pattern
 			{ l }
 	| UNIT 
-			{ Unit }
+			{ Cst (parse_cst "[]") }
 
 primop:	
 	| PRED e=expr 
@@ -103,6 +103,8 @@ a_expr:
 			{ Cst c }
 
 fun_expr:
+	| FUN UNIT fun_delim e=expr 
+			{ Lam (mk_arrow (parse_t "[]") any, fresh_var (), e) }
 	| FUN t=pat x=var fun_delim e=expr   
 			{ Lam (t, x, e) }
 	| FUN xs=id_list fun_delim e=expr
@@ -138,6 +140,8 @@ binop:
 		{ Minus (e1, e2) }
 	| e1=expr EQ e2=expr
 		{ Eq (e1, e2) }
+	| e1=expr MOD e2=expr 
+		{ Mod (e1, e2) }
 	
 
 let_pattern:

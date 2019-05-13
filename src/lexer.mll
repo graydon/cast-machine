@@ -60,7 +60,7 @@ let trim_dollar s =
 
 
 let newline         =  ('\010' | '\013' | "\013\010")
-let blank           = [' ' '\009' '\012']
+let blank           = [' ']
 (* let decimal_literal = '-'? ['0'-'9'] ['0'-'9' '_']* *)
 let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
 let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|";") ' '*
@@ -73,10 +73,10 @@ let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Any"|"Empty"|"Int"|"Byte"
 										|"Arrow"|"Char"|"Atom"|"Pair"
 										|"Record"|"String"|"Latin1"
-										|"Bool"|"Float"|"AnyXml"
-										|"Namespaces"|"Abstract"
+										|"Bool"|"Float"|"AnyXml"|"Bottom"
+										(* |"Namespaces"|"Abstract"
 										|"Caml_int"|"In_channel"
-										|"Out_channel"|"Bottom"
+										|"Out_channel"  *)
 let ppfunvar				= "Stream" ' '* '(' ppitem ')' 
 (*delimiters: parenthesis, brackets, braces *)
 let dopen 					= ['(' '[' '{']
@@ -92,6 +92,7 @@ rule token = parse
   | blank +         { token lexbuf }
   | "(*"            { comment_level := 0; comment lexbuf; token lexbuf }
   | '.'             { DOT }
+	| "mod"						{ MOD }
 	| "()"						{ UNIT }
 	| "->"						{ ARROW }
 	| "`"							{ BACKTICK }
@@ -106,7 +107,7 @@ rule token = parse
 	| '='							{ EQ }
 	| ','							{ COMMA }
 	| ':'							{ COLON }
-	| '%'							{ MOD }
+	| '%'							{ CAST }
   | '('             { PAROPEN }
   | ')'             { PARCLOSE }
 	| '\\' 						{ FUN }
