@@ -1,4 +1,3 @@
-# 1 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
 open Primitives
 open Utils
 open Bytecode
@@ -7,8 +6,8 @@ open Types.Print
 open Bytecode_Eager
 open Syntax.Eager
 
+#define BENCH "true"
 
-# 11 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
 (* module Env = struct 
     include Hashtbl.Make(struct 
         type t = var
@@ -394,8 +393,9 @@ module Make_Machine (B : Bytecode) = struct
 
         let run code env = 
             let rec aux : state -> state = fun state ->
-            
-# 399 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
+#ifndef BENCH
+            let state = run_procedures state in 
+#endif
             match state with
                 | ACC n :: c, e, s, d ->
                     aux (c, e, (access e n) :: s, d)
@@ -529,8 +529,9 @@ module Make_Machine (B : Bytecode) = struct
 
         
     let run_init code =
-        
-# 535 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
+#ifndef BENCH
+        let () = if !(run_params.debug) then print_endline "Run initialization" in
+#endif
         run code []
 
     let finish = function 
@@ -541,13 +542,49 @@ module Make_Machine (B : Bytecode) = struct
 
     let wrap_run : bytecode -> parameters_structure -> unit = 
         fun code params ->
-            
-# 554 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
+#ifndef BENCH
+            begin 
+            run_params.debug := !(params.debug);
+            run_params.verbose := !(params.verbose);
+            run_params.step_mode := !(params.step_mode);
+            run_params.monitor := !(params.monitor);
+            run_params.step_start := !(params.step_start)
+            end;
+#endif
             let v = finish (run_init code) in
-            
-# 558 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
+#ifndef BENCH
+            let () = 
+#endif
             print_string "- " ; print_string @@ show_result v; print_endline ""
-# 588 "/home/glib/dev/cast-machine/src/exec.cppo.ml"
+#ifndef BENCH
+            in 
+            if !(params.monitor) then
+                begin
+                print_endline "\n===Monitor===\n=============\n";
+                let met = run_params.metrics in
+                let (step_max, size_max) = max cmp_tuple met.stack_sizes in
+                Printf.printf "Stack max size:               %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.dump_sizes in
+                Printf.printf "Control stack max size:       %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.longest_proxies in
+                Printf.printf "Longest proxy size:           %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.casts in
+                Printf.printf "Largest amount of casts size: %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.env_sizes in
+                Printf.printf "Env max size: %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let instr_counts = met.instructions in
+                let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in
+                List.iter (fun (by, cnt) ->
+                        printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts;
+                print_endline "\n=============\n=============";
+                run_params.metrics <- init_metrics ()
+                end
+#endif
 end
 
 module Machine = Make_Machine(Bytecode_Eager)

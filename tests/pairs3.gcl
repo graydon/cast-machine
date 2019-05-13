@@ -1,1 +1,1 @@
-let make_stream hd thunk = (hd, thunk) in
+(* let make_stream hd thunk = (hd, thunk) in 0;; *)

@@ -50,10 +50,10 @@ module type Bytecode = sig
     type mark = Static | Strict
     
     type byte = 
-            | ACC of var
+            | ACC of int
             | CST of b
-            | CLS of var * byte list * kappa
-            | RCL of var * var * byte list * kappa
+            | CLS of byte list * kappa
+            (* | RCL of var * var * byte list * kappa *)
             | TYP of kappa
             | APP                     (* app *)
             | TAP                     (* tailapp *)
@@ -61,13 +61,13 @@ module type Bytecode = sig
             | TCA of kappa              (* tailcast *)
             | RET
             | SUC | PRE | MUL | ADD | SUB | MOD
-            | LET of var
-            | END of var
+            | LET
+            | END
             | EQB
             | IFZ of byte list * byte list
             | UNI
             | MKP | FST | SND
-            | LER of var (* letrec *)
+            (* | LER of var letrec *)
 
     type bytecode = byte list
 
@@ -86,10 +86,10 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
         | Strict
 
     type byte = 
-              | ACC of var
+              | ACC of int 
               | CST of b
-              | CLS of var * byte list * kappa
-              | RCL of var * var * byte list * kappa
+              | CLS of byte list * kappa
+              (* | RCL of var * var * byte list * kappa *)
               | TYP of kappa
               | APP                     (* app *)
               | TAP                     (* tailapp *)
@@ -97,13 +97,13 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
               | TCA of kappa              (* tailcast *)
               | RET
               | SUC | PRE | MUL | ADD | SUB | MOD
-              | LET of var
-              | END of var
+              | LET
+              | END
               | EQB
               | IFZ of byte list * byte list
               | UNI
               | MKP | FST | SND
-              | LER of var (* letrec *)
+              (* | LER of var letrec *)
 
     type bytecode = byte list
 
@@ -112,33 +112,34 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
             | Static -> "*"
             | Strict -> "□"
         let rec show_byte verb = function
-            | LER v -> "LER " ^ (pp_var v)  | UNI ->   "UNIT" | ACC v -> "ACC " ^ (pp_var v)
+            (* | LER v -> "LER " ^ (pp_var v)   *)
+            | UNI ->   "UNIT" | ACC n -> "ACC " ^ (string_of_int n)
             | CST b -> "CST " ^ (pp_b b) | TYP k -> "TYP " ^ (show_kappa k)
             | FST ->   "FST" | SND   -> "SND" | CAS ->   "CAS" | TAP ->   "TAILAPP"
             | MKP ->   "make_pair" | TCA k ->  
                 Printf.sprintf "TAILCAST %s" (show_kappa k)
-            | CLS (v, btc, k) ->
+            | CLS (btc, k) ->
                 begin match verb with
                 | 0 -> "CLS"
                 | 1 -> 
-                Printf.sprintf "CLS (%s,...)" (pp_var v)
+                Printf.sprintf "CLS (...)" 
                 | _ -> 
-                Printf.sprintf "CLS (%s, %s, %s)"
-                (pp_var v) (show_bytecode verb btc)
+                Printf.sprintf "CLS (%s, %s)"
+                (show_bytecode verb btc)
                 (show_kappa k)  end
-            | RCL (f, v, btc, k) ->
+            (* | RCL (f, v, btc, k) ->
                 begin match verb with
                 | 0 -> Printf.sprintf "CLS_%s" (pp_var f)
                 | 1 -> Printf.sprintf "CLS_%s (%s,...)" (pp_var f) (pp_var v)
                 | _ -> Printf.sprintf "CLS_%s (%s, %s, %s)" (pp_var f)
                     (pp_var v) (show_bytecode verb btc)
-                    (show_kappa k)  end
+                    (show_kappa k)  end *)
             | APP ->   "APP"
             | RET ->   "RET"
             | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB"
             | PRE ->   "PRE"
-            | LET v -> "LET " ^ (pp_var v)
-            | END v -> "END " ^ (pp_var v)
+            | LET -> "LET" 
+            | END -> "END"
             | EQB ->   "EQB"
             | MOD -> "MOD"
             | IFZ (btc1, btc2) ->
@@ -198,7 +199,7 @@ module Bytecode_Symbolic = Make_Bytecode(Symbol)
         | RET ->   "RET"
         | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB"
         | PRE ->   "PRE"
-        | LET v -> "LET " ^ (pp_var v)
+        | LET -> "LET " ^ (pp_var v)
         | END v -> "END " ^ (pp_var v)
         | EQB ->   "EQB"
         | IFZ (btc1, btc2) ->

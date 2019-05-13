@@ -104,13 +104,13 @@ a_expr:
 
 fun_expr:
 	| FUN UNIT fun_delim e=expr 
-			{ Lam (mk_arrow (parse_t "[]") any, fresh_var (), e) }
+			{ Mu (mk_arrow (parse_t "[]") any, fresh_var (), fresh_var (), e) }
 	| FUN t=pat x=var fun_delim e=expr   
-			{ Lam (t, x, e) }
+			{ Mu (t, fresh_var (), x, e) }
 	| FUN xs=id_list fun_delim e=expr
 			{ let rec currify e = function
 				| [] -> e
-				| x :: xs -> Lam (qfun (), x, currify e xs)
+				| x :: xs -> Mu (qfun (), fresh_var (), x, currify e xs)
 			  in currify e xs }
 
 id_list:
@@ -148,26 +148,27 @@ let_pattern:
 	| LET x=var EQ e1=expr IN e2=expr
 			{ Let (x, e1, e2) }
 	| LET f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Lam (t, x, e1), e2) }
+			{ Let (f, Mu (t, f, x, e1), e2) }
 	| LET f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Lam (cap t1 t2, x, e1), e2) }
+			{ Let (f, Mu (cap t1 t2, f, x, e1), e2) }
 	| LET f=var x=var EQ e1=expr IN e2=expr
-			{ Let (f, Lam (qfun (), x, e1), e2) } 
+			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
 	| LET REC f=var EQ e1=expr IN e2=expr
-			{ Letrec (f, e1, e2) }
+			{ match e1 with
+				| Mu (t, _, x, e) -> Let (f, Mu (t, f, x, e), e2)
+			  	| _ -> failwith "not a function" }
 	| LET REC f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
-			{ Letrec (f, Lam (t, x, e1), e2) }
+			{ Let (f, Mu (t, f, x, e1), e2) }
 	| LET REC f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
-			{ Letrec (f, Lam (cap t1 t2, x, e1), e2) }
+			{ Let (f, Mu (cap t1 t2, f, x, e1), e2) }
 	| LET REC f=var x=var EQ e1=expr IN e2=expr
-			{ Letrec (f, Lam (qfun (), x, e1), e2) } 
-	| LET REC idf=var EQ f=fun_expr IN e2=expr
-			{ match f with
-			  | Lam (t, x, e) -> Letrec (idf, Lam (t, x, e), e2)
-			  | _ -> failwith "rec used without a function" }
-(*	| m=and_let
-			{ a }
+			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
+	| LET REC f=var EQ e1=fun_expr IN e2=expr
+			{ match e1 with
+			  | Mu (t, _, x, e) -> Let (f, Mu (t, f, x, e), e2)
+			  | _ -> failwith "not a function" }
 			
+(*
 and_let: 
 	| LET REC f=var COLON t=pat EQ FUN x=var fun_delim e1=expr AND e3=let_pattern IN e2=expr 
 			{ match e3 with

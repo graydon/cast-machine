@@ -21,8 +21,8 @@ module Eager_Calculus = struct
     type twosome = tau * tau * betared
     type v = 
         [ | `Cst of b 
-        | `Closure of (tau * var * e) * twosome * env
-        | `RClosure of var * (tau * var * e) * twosome * env
+        | `Closure of (tau * var * var * e) * twosome * env
+        (* | `RClosure of var * (tau * var * e) * twosome * env *)
         | `Fail
         | `Pair of v * v
         ]
@@ -31,8 +31,8 @@ module Eager_Calculus = struct
     let rec show_v : v -> string = function
         | `Fail -> "Fail"
         | `Cst b -> pp_const Format.str_formatter b; Format.flush_str_formatter ()
-        | `RClosure (_, (t,x,e),_,_)
-        | `Closure ((t, x, e), _, _) -> pprint_e (Lam (t, x, e))
+        (* | `RClosure (_, (t,x,e),_,_) *)
+        | `Closure ((t, f,x, e), _, _) -> pprint_e (Mu (t, f,x, e))
         | `Pair (v1, v2) -> Printf.sprintf "(%s, %s)" (show_v v1) (show_v v2)
 
     let print_v : v -> unit = fun v -> print_string @@ show_v v
@@ -42,7 +42,7 @@ module Eager_Calculus = struct
         
     let rec typeof : v -> t = function
         | `Cst b -> constant b
-        | `RClosure (_, _,(t1', t2', _), _)
+        (* | `RClosure (_, _,(t1', t2', _), _) *)
         | `Closure (_, (t1', t2', _), _) -> 
             arrow (cons t1') (cons t2')
         | `Fail -> failwith "error: type of `Fail"
@@ -58,8 +58,8 @@ module Eager_Calculus = struct
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
             | `Closure (e', tau, env') ->
                 `Closure (e', inter tau (tau1, tau2), env') 
-            | `RClosure (f,e', tau, env') ->
-                `RClosure (f,e',inter tau (tau1, tau2), env') 
+            (* | `RClosure (f,e', tau, env') ->
+                `RClosure (f,e',inter tau (tau1, tau2), env')  *)
             | `Pair (v1, v2) -> 
                 let v1' = cast v1 (pi1 tau1, tau2) in
                 let v2' = cast v2 (pi2 tau1, tau2) in
@@ -74,7 +74,7 @@ module Eager_Calculus = struct
                 if not !(exec_info.inline) then print_endline "";
                 exec_info.inline := false end;
         match e with 
-        | Unit -> `Cst (parse_cst "")
+        (* | Unit -> `Cst (parse_cst "") *)
         | Var x -> begin
             try Env.find x env
             with Not_found -> 
@@ -91,16 +91,16 @@ module Eager_Calculus = struct
             let v = aux env e1 in
             let env' = Env.add x v env in
                 aux env' e2
-        | Lam (tau, x, e) -> 
-            `Closure ((tau, x, e), (tau, dom tau, T), Env.empty)
+        | Mu (tau, f, x, e) -> 
+            `Closure ((tau, f, x, e), (tau, dom tau, T), Env.empty)
         
         | Letrec (f, e1, e2) ->
             let v =
             (match aux env e1 with
             | `Pair (v1, v2) -> `Pair (v1, v2)
-            | `RClosure _ -> failwith "error: didn't expect recursive closure because general recursion not yet supported"
+            (* | `RClosure _ -> failwith "error: didn't expect recursive closure because general recursion not yet supported" *)
             | `Closure (a1,a2,a3)
-                -> `RClosure (f,a1,a2,a3)
+                -> `Closure (a1,a2,a3)
             | `Cst c -> `Cst c
             | `Fail -> `Fail) in
             let env' = Env.add f v env in
@@ -158,8 +158,8 @@ module Eager_Calculus = struct
             | `Cst c -> if subtype (constant c) (ceil tau1) then `Cst c else `Fail
             | `Closure (e', tau, env') ->
                 `Closure (e', inter tau (tau1, tau2), env') 
-            | `RClosure (f,e', tau, env') ->
-                `RClosure (f,e',inter tau (tau1, tau2), env') 
+            (* | `RClosure (f,e', tau, env') ->
+                `RClosure (f,e',inter tau (tau1, tau2), env')  *)
             | (`Pair (v1, v2)) as v -> 
                 let t = typeof v in 
                 if subtype t (ceil tau1) then `Pair (v1, v2) else `Fail
@@ -170,10 +170,10 @@ module Eager_Calculus = struct
             | `Cst _ -> failwith "error: trying to result a constant"
             | `Pair _ -> failwith "error: trying to result a pair"
             | `Fail -> `Fail
-            | `RClosure (f, a1, a2, env) as rcls ->
+            (* | `RClosure (f, a1, a2, env) as rcls ->
                 let env' = Env.add f rcls env in
-                enter_closure (`Closure (a1, a2, env'))
-            | `Closure (((_, x, e') , (tau1, tau2, _), env')) -> 
+                enter_closure (`Closure (a1, a2, env')) *)
+            | `Closure (((_,f, x, e') , (tau1, tau2, _), env')) -> 
                 let v = aux env e2 in
                 let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
                 let env'' = Env.add x v0 env' in
@@ -196,9 +196,9 @@ module Eager_Calculus = struct
                 | `Closure (fe'', tau', _) ->
                     let tapp = result tau1 (typeof v) in
                     `Closure (fe'', inter tau' (tapp, dom tapp), env'')
-                | `RClosure (f, fe'', tau', _) ->
+                (* | `RClosure (f, fe'', tau', _) ->
                     let tapp = result tau1 (typeof v) in
-                    `RClosure (f, fe'', inter tau' (tapp, dom tapp), env'')
+                    `RClosure (f, fe'', inter tau' (tapp, dom tapp), env'') *)
                 | `Fail -> `Fail (* trying to result `Fail as a function *)
                 end
             in enter_closure (aux env e1)
@@ -243,7 +243,7 @@ module Symbolic_Calculus = struct
 
     type v = 
         [ | `Cst of b 
-        | `Closure of (tau * var * e) * sigma * env
+        | `Closure of (tau * var * var * e) * sigma * env
         | `Fail
         ]
     and venv = [ `Cast of v * sigma ]
@@ -275,32 +275,33 @@ module Symbolic_Calculus = struct
         let v = eval_aux env e1 in 
         let env' = Env.add x (`Cast (v, (Id any))) env in
             eval_aux env' e2
-    | Lam (tau, x, e) -> 
-        `Closure ((tau, x, e), Id tau, Env.empty)
+    | Mu (tau, f,x, e) -> 
+        `Closure ((tau, f, x, e), Id tau, Env.empty)
     | Cast (e, sigma1) -> 
         begin match (eval_aux env e) with
         | `Cst c -> if subtype (constant c) (ceil (eval1 sigma1)) then `Cst c else `Fail
         | `Closure (e', sigma2, env') ->
             `Closure (e', comp sigma1 sigma2, env') 
         | `Fail -> `Fail end
-    | App (e1, e2) ->
+    (* | App (e1, e2) ->
         begin match (eval_aux env e1) with
         | `Cst _ -> failwith "error: trying to result a constant"
         | `Fail -> `Fail
-        | `Closure (((_, x, e') , sigma1, env')) -> 
+        | `Closure ((t, f,x, e') , sigma1, env')-> 
             let v' = eval_aux env e2 in
             (* here is the distinction lazy/eager for this symbolic calc *)
             (* let v0 = eval_aux env (Cast (e2, Dom sigma1)) in *)
-            let env'' = Env.add x (`Cast (v', Dom sigma1)) env' in
-            begin match (eval_aux env'' e') with
+            let env1 = Env.add x (`Cast (v', Dom sigma1)) env' in
+            let env2 = Env.add f (`Closure ((t, f,x, e') , sigma1, env')) env1 in
+            begin match (eval_aux env2 e') with
             | `Cst c -> let tau1 = eval1 sigma1 in 
                 if subtype (constant c) (ceil (result tau1 (typeof v'))) 
                 then `Cst c else `Fail
             | `Closure (fe'', sigma2, env'') ->
-                `Closure (fe'', Comp (App (typeof v', sigma1), sigma2), env'')
+                `Closure (fe'', Comp (App (typeof v', sigma1), sigma2), env)
             | `Fail -> `Fail (* trying to result `Fail as a function *)
             end
-        end
+        end *)
     
     let eval : e -> v = fun e -> eval_aux Env.empty e 
 
@@ -310,7 +311,7 @@ module Symbolic_Calculus = struct
         begin match eval e with
         | `Fail -> print_string "Fail"
         | `Cst b -> print_string (pp_const Format.str_formatter b; Format.flush_str_formatter ())
-        | `Closure ((t, x, e), _, _) -> print_e (Lam (t, x, e)) end; 
+        | `Closure ((t, f, x, e), _, _) -> print_e (Mu (t, f, x, e)) end; 
         print_endline "\n"
 end 
 

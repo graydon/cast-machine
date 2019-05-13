@@ -61,14 +61,14 @@ module type Cast_Expr = sig
       | Pair of e * e
       | Let of var * e * e
       | Letrec of var * e * e
-      | Lam of tau * var * e
+      | Mu of tau * var * var * e
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e
       | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
       | Ifz of e * e * e
       | Eq of e * e
-      | Unit
+      (* | Unit *)
      type prog =
 		| Expr of e
 		| Eol
@@ -92,20 +92,20 @@ struct
       | Pair of e * e
       | Let of var * e * e
       | Letrec of var * e * e
-      | Lam of tau * var * e
+      | Mu of tau * var * var * e
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e 
       | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
       | Ifz of e * e * e
       | Eq of e * e
-      | Unit
+      (* | Unit *)
       (* | TwoCast of e * tau * tau  *)
         (* for now no product, let and type abstraction *)
         (* | `Prd of e * e *)
         (* | `Pi1 of e *)
         (* | `Pi2 of e *)
-        (* | `TLam of alpha_vector * e *)
+        (* | `TMu of al _,pha_vector * e *)
         (* | `TApp of e * t_vector *)
       type prog =
 		| Expr of e
@@ -131,7 +131,7 @@ module Eager = struct
 
         let rec pprint_e : e -> string = fun e ->
             let rec aux offset = function
-            | Unit -> "()"
+            (* | Unit -> "()" *)
             | Var var -> pp_var var
             | Cst b -> pp_b b
             | Pair (e1, e2) ->
@@ -142,7 +142,7 @@ module Eager = struct
                 sprintf "fst %s" (pprint_e e)
             | Snd e -> 
                 sprintf "snd %s" (pprint_e e)
-            | Lam (tau, var, e) ->
+            | Mu (tau, _, var, e) ->
                 Printf.sprintf "λ [%s] %s . %s"
                 (pp_tau tau) (pp_var var) (pprint_e e)  
             | Eq (e1, e2) ->
@@ -161,13 +161,14 @@ module Eager = struct
             | App (e1, e2) -> 
                 let s_format : _ format =
                     (match e2 with
-                    | Lam _ | Cast _ -> "(%s) (%s)"
+                    | Mu _ 
+                    | Cast _ -> "(%s) (%s)"
                     | _ ->     "(%s) %s") in
                 Printf.sprintf s_format (pprint_e e1) (pprint_e e2)
             | Cast (e, (tau1, tau2)) ->
                 let s_format : _ format = 
                     (match e with
-                    | Lam _ -> "(%s) 〈%s, %s〉" (* careful: influences the variant type *)
+                    | Mu _ ->  "(%s) 〈%s, %s〉" (* careful: influences the variant type *)
                     | Cast _ -> "%s〈%s, %s〉" (* careful: influences the variant type *)
                     | _ -> "%s 〈%s, %s〉") in
                 Printf.sprintf s_format (pprint_e e) (pp_tau tau1) (pp_tau tau2)
@@ -190,7 +191,7 @@ module Eager = struct
                 Printf.sprintf "π_1 %s" (pprint_e e)
             | `Let (var, e1, e2) ->
                 Printf.sprintf "let %s = %s in %s" (pp_var var) (pprint_e e1) (pprint_e e2)
-            | `TLam (av, e) ->
+            | `TMu (av,  _,e) ->
                 Printf.sprintf "Λ %s . %s" (pprint_alpha_vector av) (pprint_e e)
             | `TApp (e, tv) ->
                 Printf.sprintf "(%s) [%s]" (pprint_e e) (pprint_t_vector tv) *)
@@ -220,7 +221,7 @@ struct
       | Var of var
       | Cst of b
       | Let of var * e * e
-      | Lam of tau * var * e
+      | Mu of tau * var * var * e
       | App of e * e
       | Cast of e * castkind
       | Succ of e | Pred of e
@@ -242,7 +243,7 @@ struct
         let rec (pprint_e : e -> string) = function
             | Var var -> pp_var var
             | Cst b ->   pp_b b
-            | Lam (tau, var, e) -> 
+            | Mu (tau, _, var, e) -> 
                 Printf.sprintf "(λ %s . %s) : %s" (pp_var var) (pprint_e e) (pp_tau tau) 
             | Let (x, e1, e2) ->
                 Printf.sprintf "let %s = %s in %s"
@@ -252,14 +253,14 @@ struct
             | Cast (e, (Cast t | Id t)) ->
                 let s_format : _ format = 
                     (match e with
-                    | Lam _ -> "(%s) 〈%s〉"
+                    | Mu _ ->  "(%s) 〈%s〉"
                     | Cast _ -> "%s〈%s〉" 
                     | _ -> "%s 〈%s〉") in
                 Printf.sprintf s_format (pprint_e e) (pp_tau t)
             | Cast (e, _) -> 
                 let s_format : _ format = 
                     (match e with
-                    | Lam _ -> "(%s) 〈sigma〉"
+                    | Mu _ ->  "(%s) 〈sigma〉"
                     | Cast _ -> "%s〈sigma〉"
                     | _ -> "%s 〈sigma〉") in
                 Printf.sprintf s_format (pprint_e e)
@@ -276,7 +277,7 @@ struct
                 Printf.sprintf "π_1 %s" (pprint_e e)
             | `Let (var, e1, e2) ->
                 Printf.sprintf "let %s = %s in %s" (pp_var var) (pprint_e e1) (pprint_e e2)
-            | `TLam (av, e) ->
+            | `TMu (av,  _,e) ->
                 Printf.sprintf "Λ %s . %s" (pprint_alpha_vector av) (pprint_e e)
             | `TApp (e, tv) ->
                 Printf.sprintf "(%s) [%s]" (pprint_e e) (pprint_t_vector tv) *)
@@ -344,13 +345,13 @@ end *)
     type e = 
       [ | `Var of var
         | `Cst of b
-        | `Lam of tau * tau * var * e
+        | `Mu of ta _,u * tau * var * e
         | `App of e * e
         | `Prd of e * e
         | `Pi1 of e
         | `Pi2 of e
         | `Let of var * e * e
-        | `TLam of alpha_vector * e
+        | `TMu of al _,pha_vector * e
         | `TApp of e * t_vector
         | `Cast of e * tau * p * tau ]
     (* type v = int *)
