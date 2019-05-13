@@ -33,7 +33,7 @@ module Make_Compile (B : Bytecode) = struct
         | App (e1, e2) ->              (compile r e1) @ (compile r e2) @ [APP]
         | Fst e ->                     (compile r e) @ [FST]
         | Snd e ->                     (compile r e) @ [SND]
-        | Mu (t, f, x, e) ->           [CLS (tail_compile (mk_rho (mk_rho r x) f) e, mk_kappa (t, dom t))]
+        | Mu (t, f, x, e) ->           [CLS (tail_compile (mk_rho (mk_rho r f) x) e, mk_kappa (t, dom t))]
         | Cast (e, k) ->               [TYP (mk_kappa k)] @ (compile r e) @ [CAS]
         | Pair (e1, e2) ->             (compile r e1) @ (compile r e2) @ [MKP]
         | Succ e ->                    (compile r e) @ [SUC]

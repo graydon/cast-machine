@@ -10,12 +10,13 @@ main:
 	-lflags '-I '${CDUCE}' 'cduce_lib.cmxa  \
 	-package expat -package pxp -package curl,camlp4.lib,num,dynlink \
 
-main_byte:
-	ocamlbuild -use-menhir -use-ocamlfind -I src main.byte \
+byte:
+	cppo ${CURDIR}/src/exec.cppo.ml -o ${CURDIR}/src/exec.ml
+	ocamlbuild -use-menhir -use-ocamlfind -tag debug -I src main.byte \
 	-cflags '-w -58' \
 	-cflags '-I '${CDUCE} \
 	-lflags '-I '${CDUCE}' 'cduce_lib.cma  \
-	-package expat -package pxp -package curl,camlp4.lib,num,dynlink
+	-package expat -package pxp -package curl,camlp4.lib,num,dynlink \
 
 web:
 	ocamlbuild -use-menhir -use-ocamlfind \

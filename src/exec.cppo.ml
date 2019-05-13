@@ -6,7 +6,7 @@ open Types.Print
 open Bytecode_Eager
 open Syntax.Eager
 
-#define BENCH "true"
+
 
 (* module Env = struct 
     include Hashtbl.Make(struct 
@@ -126,14 +126,14 @@ module Make_Machine (B : Bytecode) = struct
 
         and show_result : stack_item -> string = function
         | `CST b -> 
-            Printf.sprintf ": %s = %s" (pp_tau (constant b)) (pp_b b)
-        | `CLS (btc, _, k,_) -> 
+            Printf.sprintf "%s = %s" (pp_tau (constant b)) (pp_b b)
+        | `CLS (_,_, k,_) -> 
             let (t,_) = eval k in
-            Printf.sprintf ": %s = <fun>" (pp_tau t)
-        | `FAIL -> ": Fail"
+            Printf.sprintf "%s = <fun>" (pp_tau t)
+        | `FAIL -> "Fail"
         | `PAIR (v1, v2) as v -> 
-            Printf.sprintf ": %s = (%s, %s)" (pp_tau @@ typeof v)
-            (show_stack_value v1) (show_stack_value v2) 
+            Printf.sprintf "%s = (%s, %s)" (pp_tau @@ typeof v)
+            (show_result v1) (show_result v2) 
         | _ -> failwith "not a return value"
 
         and show_env verb : bool -> env -> string = fun inline e ->
@@ -203,7 +203,9 @@ module Make_Machine (B : Bytecode) = struct
             mutable casts : (int * int) list;
             instructions : int MetricsEnv.t;
             mutable dump_sizes : (int * int) list;
-            mutable env_sizes : (int * int) list
+            mutable env_sizes : (int * int) list;
+            mutable dump_frames : (int * int) list;
+            mutable dump_bounds : (int * int) list;
             }
 
 
@@ -228,7 +230,8 @@ module Make_Machine (B : Bytecode) = struct
             casts = [];
             instructions = MetricsEnv.create 20;
             dump_sizes = [];
-            env_sizes = []
+            env_sizes = [];
+            dump_frames = []; dump_bounds = []
             }
 
         let run_params =
@@ -252,6 +255,10 @@ module Make_Machine (B : Bytecode) = struct
             | _ :: s -> aux acc s
         in aux 0 
 
+        let count_bound dmp : int = 
+            List.fold_left (fun n e -> match e with | Boundary t -> n+1 | _ -> n) 0 dmp
+
+
         let longest_proxy : stack -> int = 
             let rec aux max acc = function
             | [] -> max
@@ -264,10 +271,11 @@ module Make_Machine (B : Bytecode) = struct
         in aux 0 0
 
 
-        let env_length e = List.length e
+        let env_length : env -> int = List.length
         let dump_length d = List.fold_left 
-                (fun n -> function | Frame (c,e) -> 1 + env_length e + n
+                (fun n -> function | Frame (c,e) -> env_length e + n
                                    | _ -> n) 0 d
+        let dump_frame_length d = List.length d
 
 
 
@@ -275,9 +283,11 @@ module Make_Machine (B : Bytecode) = struct
             fun run_params -> let met = run_params.metrics in
             fun (c, e, s, d) ->
             begin
+            met.dump_bounds<-  (!(run_params.step), count_bound d) :: met.dump_bounds;
             met.env_sizes <- (!(run_params.step), List.length e) :: met.env_sizes;
             met.stack_sizes <- (!(run_params.step), (List.length s)) :: met.stack_sizes;
             met.dump_sizes <- (!(run_params.step), dump_length d) :: met.dump_sizes;
+            met.dump_frames <- (!(run_params.step), dump_frame_length d) :: met.dump_frames;
             met.longest_proxies <- (!(run_params.step), (longest_proxy s)) :: met.longest_proxies;
             met.casts <- (!(run_params.step), (count_cast s)) :: met.casts;
             run_params.metrics <- met;
@@ -404,7 +414,8 @@ module Make_Machine (B : Bytecode) = struct
                     aux (c, e, `CST b :: s, d)
 
                 | CLS (c', k) :: c, e, s, d ->
-                    aux (c, e, `CLS (c', e, k, Static) :: s, d)
+                    let rec cls = `CLS (c',cls::e,k,Static) in
+                    aux (c, e, cls::s, d)
                 
                 (* | RCL (f, x, c', k) :: c, e, s, d ->
                     let e' = Env.copy e in
@@ -418,8 +429,8 @@ module Make_Machine (B : Bytecode) = struct
                 | TYP k :: c, e, s, d ->
                     aux (c, e, `TYP k :: s, d)
 
-                | APP :: c, e,  v :: (`CLS (c', e', _, Static) as cls) :: s, d ->
-                    aux (c', cls :: v :: e', s, Frame (c, e) :: d)
+                | APP :: c, e,  v :: `CLS (c', e', _, Static)  :: s, d ->
+                    aux (c', v :: e', s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
                     let kr = mk_app k (typeof v) in 
@@ -427,8 +438,8 @@ module Make_Machine (B : Bytecode) = struct
                     aux (CAS :: APP :: CAS :: c, e, 
                         v :: `TYP kd :: `CLS (c', e', k, Static) :: `TYP kr :: s, d)
 
-                | TAP :: _, _,  v :: (`CLS (c', e', _, Static) as cls) :: s, d ->
-                    aux (c', cls :: v :: e', s, d)
+                | TAP :: _, _,  v :: `CLS (c', e', _, Static) :: s, d ->
+                    aux (c', v :: e', s, d)
 
                 | TAP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
                     let kr = mk_app k (typeof v) in
@@ -445,8 +456,8 @@ module Make_Machine (B : Bytecode) = struct
                 (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
                     aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d) *)
 
-                | TCA k::_, _, v::(`CLS (c',e',_,Static) as cls)::s, d ->
-                    aux (c', cls::v::e', s, dump k d)
+                | TCA k::_, _, v::`CLS (c',e',_,Static)::s, d ->
+                    aux (c', v::e', s, dump k d)
 
                 | TCA k :: c, e, v :: `CLS (c',e',k',Strict) :: s, d ->
                     let kr = mk_app k' (typeof v) in
@@ -555,7 +566,7 @@ module Make_Machine (B : Bytecode) = struct
 #ifndef BENCH
             let () = 
 #endif
-            print_string "- " ; print_string @@ show_result v; print_endline ""
+            print_string "- : " ; print_string @@ show_result v; print_endline ""
 #ifndef BENCH
             in 
             if !(params.monitor) then
@@ -566,9 +577,15 @@ module Make_Machine (B : Bytecode) = struct
                 Printf.printf "Stack max size:               %s at step %s\n" 
                 (string_of_int size_max) (string_of_int step_max);
                 let (step_max, size_max) = max cmp_tuple met.dump_sizes in
-                Printf.printf "Control stack max size:       %s at step %s\n" 
+                Printf.printf "Dump env max size:       %s at step %s\n" 
                 (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.longest_proxies in
+                let (step_max, size_max) = max cmp_tuple met.dump_frames in
+                Printf.printf "Dump length max :       %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.dump_frames in
+                Printf.printf "Dump casts max :       %s at step %s\n" 
+                (string_of_int size_max) (string_of_int step_max);
+                let (step_max, size_max) = max cmp_tuple met.dump_bounds in
                 Printf.printf "Longest proxy size:           %s at step %s\n" 
                 (string_of_int size_max) (string_of_int step_max);
                 let (step_max, size_max) = max cmp_tuple met.casts in
