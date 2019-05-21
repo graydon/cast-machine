@@ -1,0 +1,5 @@
+version="1.0.0-devel"
+requires="dynlink camlp4.lib ulex lwt cohttp unix num curl netstring pxp-engine pxp-lex-iso88591 pxp-lex-utf8 netcgi2 expat"
+description="Runtime support for CDuce"
+archive(native)="cduce_lib.cmxa"
+archive(byte)="cduce_lib.cma"
