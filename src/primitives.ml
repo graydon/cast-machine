@@ -27,6 +27,7 @@ let pi2 t = t |> CD.Types.Product.get ~kind:`Normal |> CD.Types.Product.pi2
 let mk_atom s = s |> CD.Atoms.V.mk_ascii |> CD.Atoms.atom |> CD.Types.atom
 let mk_var s = CD.Var.mk ~internal:false s
 let mk_arrow t1 t2 = arrow (cons t1) (cons t2)
+let mk_times t1 t2 = times (cons t1) (cons t2)
 
 let collect_vars = CD.Types.collect_vars
 let pp_const = CD.Types.Print.pp_const

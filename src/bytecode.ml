@@ -53,6 +53,7 @@ module type Bytecode = sig
             | ACC of int
             | CST of b
             | CLS of byte list * kappa
+            | ACLS of int * bytecode * kappa
             (* | RCL of var * var * byte list * kappa *)
             | TYP of kappa
             | APP                     (* app *)
@@ -69,7 +70,7 @@ module type Bytecode = sig
             | MKP | FST | SND
             (* | LER of var letrec *)
 
-    type bytecode = byte list
+    and bytecode = byte list
 
         val show_mark : mark -> string
         val show_byte : int -> byte -> string
@@ -89,6 +90,7 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
               | ACC of int 
               | CST of b
               | CLS of byte list * kappa
+              | ACLS of int * bytecode * kappa
               (* | RCL of var * var * byte list * kappa *)
               | TYP of kappa
               | APP                     (* app *)
@@ -105,7 +107,7 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
               | MKP | FST | SND
               (* | LER of var letrec *)
 
-    type bytecode = byte list
+    and bytecode = byte list
 
     (* module Print = struct  *)
         let show_mark = function 

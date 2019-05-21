@@ -3,10 +3,12 @@ open Primitives
 open Errors
 open Lexing
 open Utils
+
 let wrap_abstract = fun _ -> ()
 
 
 let () = if Array.length (Sys.argv) > 1 then begin
+      (if Array.mem "--time" Sys.argv then params.time := true);
       (if Array.mem "--help" Sys.argv then (print_endline "No help" ; raise Exit));
       (if Array.mem "--abstract" Sys.argv then params.abstract := true);
       (if Array.mem "--interpreter" Sys.argv then params.machine := "");
@@ -34,13 +36,16 @@ let eval_with_parameters params e =
       let open Exec.Machine_Symbolic in 
       let open Compile.Compile_Symbolic in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
+      let e = transform e in
       let btc = compile Nil e in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
+      (* let () = if !(params.debug) then print_endline (show_bytecode btc) in *)
       wrap_run btc params end
     else 
       let open Exec.Machine in 
       let open Compile.Compile in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
+      let e = transform e in
       let btc = compile Nil e in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
       wrap_run btc params end
@@ -87,6 +92,7 @@ let rec repl () =
     print_endline @@ "error: can't parse program {" ^ !user_input ^ "}";
     user_input := "";
     repl () 
+  | _ -> repl ()
   
 
 (* parse a lexbuf, and return a more explicit error when it fails *)

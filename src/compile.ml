@@ -27,50 +27,45 @@ module Make_Compile (B : Bytecode) = struct
 
     let dummy () = Primitives.fresh_var ()
 
+    let transform : e -> e = function
+        | e -> e
+
+    let extend_rho xs r = List.fold_left (fun r1 x -> mk_rho r1 x) r xs
+
     let rec compile r : e -> bytecode = function
-        | Var x ->                     [ACC (lookup x r)]
-        | Cst c ->                     [CST c]
-        | App (e1, e2) ->              (compile r e1) @ (compile r e2) @ [APP]
-        | Fst e ->                     (compile r e) @ [FST]
-        | Snd e ->                     (compile r e) @ [SND]
-        | Mu (t, f, x, e) ->           [CLS (tail_compile (mk_rho (mk_rho r f) x) e, mk_kappa (t, dom t))]
-        | Cast (e, k) ->               [TYP (mk_kappa k)] @ (compile r e) @ [CAS]
-        | Pair (e1, e2) ->             (compile r e1) @ (compile r e2) @ [MKP]
-        | Succ e ->                    (compile r e) @ [SUC]
-        | Pred e ->                    (compile r e) @ [PRE]
-        | Let (x, e1, e2) ->           (compile r e1) @ [LET] @ (compile (mk_rho r x) e2) @ [END]
-        | Letrec _ ->       failwith "letrec should all be eliminated at compile"
-        | Ifz (cond, e1, e2) ->        (compile r cond) @ [IFZ (compile r e1, compile r e2)]
+        | Var x ->                      [ACC (lookup x r)]
+        | Cst c ->                      [CST c]
+        | App (e1, e2) ->               (compile r e1) @ (compile r e2) @ [APP]
+        | Apply (n, t, f, e, xs, es) -> let r1 = extend_rho xs r in let r2 = mk_rho r1 f in
+                                        [ACLS (n, tail_compile r2 e, mk_kappa (t,dom t))]
+        | Fst e ->                      (compile r e) @ [FST]
+        | Snd e ->                      (compile r e) @ [SND]
+        | Mu (t, f, x, e) ->            [CLS (tail_compile (mk_rho (mk_rho r f) x) e, mk_kappa (t, dom t))]
+        | Cast (e, k) ->                [TYP (mk_kappa k)] @ (compile r e) @ [CAS]
+        | Pair (e1, e2) ->              (compile r e1) @ (compile r e2) @ [MKP]
+        | Succ e ->                     (compile r e) @ [SUC]
+        | Pred e ->                     (compile r e) @ [PRE]
+        | Let (x, e1, e2) ->            (compile r e1) @ [LET] @ (compile (mk_rho r x) e2) @ [END]
+        | Letrec _ ->                   failwith "letrec should all be eliminated at compile"
+        | Ifz (cond, e1, e2) ->         (compile r cond) @ [IFZ (compile r e1, compile r e2)]
         | Mult (e1,e2) | Plus (e1,e2) 
         | Mod (e1,e2) | Minus (e1,e2) 
         | Eq (e1,e2) as e ->           (compile r e1) @ (compile r e2) @ [get_cons e]
+        | LetP ((x, y), e1, e2) -> 
+            let p = Primitives.fresh_var () in 
+            compile r @@ Let (p, e1, Let (x, Fst (Var p), Let (y, Snd (Var p), e2)))
         
 
     and tail_compile r : e -> bytecode = function
         | Cast (App (e1,e2), k) -> (compile r e1) @ (compile r e2) @ [TCA (mk_kappa k)]
         | Ifz (cond, e1, e2) ->    (compile r cond) @ [IFZ (tail_compile r e1, tail_compile r e2)]
         | Let (x, a, b) ->         (compile r a) @ [LET] @ (tail_compile (mk_rho r x) b)
-        (* | Letrec (x, a, b) ->      (rec_compile r x a) @ [LER x] @ (tail_compile r b) @ [END]  *)
         | App (e1, e2) ->          (compile r e1) @ (compile r e2) @ [TAP]
+        | LetP ((x, y), e1, e2) -> 
+            let p = Primitives.fresh_var () in 
+            tail_compile r @@ Let (p, e1, Let (x, Fst (Var p), Let (y, Snd (Var p), e2)))
+        | Letrec _ -> failwith "no letrec"
         | e ->                     (compile r e) @ [RET]
-
-    (* and rec_compile r : var -> e -> bytecode = fun f -> function
-        | Lam (t, x, e) ->      [RCL (f, x, tail_compile r e, mk_kappa (t, dom t))]
-        | Let (x, e1, e2) ->    (compile r e1) @ [LET] @ (rec_compile r f e2) @ [END]
-        | Letrec (g, e1, e2) -> fun_compile r f (g,e1) e2 *)
-        (* wrong *)
-        (* | Pair ((Lam (t1, _, _) as l1), (Lam (t2, _, _) as l2)) -> 
-            let xf = fresh_var () in
-            let pt = pair t1 t2 in
-            let c1 = compile r l1 in
-            let c2 = compile r l2 in 
-            [RCL (f, xf, (ACC xf :: c1) @ (ACC xf :: c2) @ [MKP], (pt, dom pt))] *)
-        (* | e ->                  (compile r e) *)
-
-    (* and fun_compile r : var -> var * e -> e -> bytecode = fun f (g,e1) -> function
-        | Lam (t, x , e) -> [RCL (f, x, tail_compile r (Letrec (g, e1, e)), mk_kappa (t,dom t))]
-        | e ->              compile r e WRONG - TODO *)
-        (* | Let (x, e1', e2) ->        fun_compile f ( *) (* TODO *)
 
 end
 

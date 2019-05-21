@@ -8,7 +8,8 @@ type parameters_structure =
    verbose : int ref;
    step_mode : bool ref;
    step_start : int ref;
-   monitor : bool ref}
+   monitor : bool ref;
+   time : bool ref}
 
 let params =
   {abstract = ref false;
@@ -19,7 +20,8 @@ let params =
   verbose = ref 1;
   step_mode = ref false;
   step_start = ref 0;
-  monitor = ref false}
+  monitor = ref false; 
+  time = ref false}
 
 let rec find a x n =
 if a.(n) = x then n 

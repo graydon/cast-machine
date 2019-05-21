@@ -6,24 +6,26 @@ open Types.Print
 open Bytecode_Eager
 open Syntax.Eager
 
+(* #define MONITOR "1" *)
+#define BENCH "1"
+(* #define DEBUG "1" *)
 
-
-(* module Env = struct 
-    include Hashtbl.Make(struct 
+(* module Env = struct
+    include Hashtbl.Make(struct
         type t = var
         let equal = (=)
         let hash = Hashtbl.hash
     end)
 end *)
 
-module type Structures = sig 
+module type Structures = sig
     type result
     type stack_item
     type stack
     type dump
     type env
     type state = bytecode * env * stack * dump
-    type nu 
+    type nu
     val empty_env : env
     val typeof : stack_item -> tau
 end
@@ -34,10 +36,12 @@ module Make_Machine (B : Bytecode) = struct
     type result = [
         | `CST of b
         | `Fail ]
-        
-    and stack_item = 
+
+    and stack_item =
         [ `CST of b
+        | `FCST of int * (stack_item list -> stack_item)
         | `CLS of bytecode * env * kappa * mark
+        | `ACLS of int * bytecode * env * kappa * mark
         | `TYP of kappa
         | `FAIL
         | `PAIR of stack_item * stack_item
@@ -46,7 +50,6 @@ module Make_Machine (B : Bytecode) = struct
     type stack = stack_item list
 
     let access e n = List.nth e n
-    
 
     let empty_env : env = []
 
@@ -55,25 +58,26 @@ module Make_Machine (B : Bytecode) = struct
         | `CST of b
         | `CLS of var * bytecode * env * kappa * mark
         | `PAIR of nu * nu ] *)
-        
-    type dump_item = 
+
+    type dump_item =
         | Boundary of kappa
         | Frame    of bytecode * env
-    type dump = dump_item list 
-    
+    type dump = dump_item list
+
     type state = bytecode * env * stack * dump
 
     let rec typeof : stack_item -> t = function
         | `CST b -> cap (constant b) (t_dyn)
-        | `CLS (_, _, k, _) -> let (t1,_) = eval k in t1
-        | `PAIR (v1, v2) ->     
+        | `CLS (_, _, k, _) -> fst (eval k)
+        | `ACLS (_,_,_,k,_) -> fst (eval k)
+        | `PAIR (v1, v2) ->
             let t1 = typeof v1 in
             let t2 = typeof v2 in pair t1 t2
         | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
 
       (* parameter functions *)
         let compose : kappa -> kappa -> kappa = fun k1 k2 ->
-            let (t1,t2) = eval k1 in 
+            let (t1,t2) = eval k1 in
             let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
 
         let dump : kappa -> dump -> dump = fun k -> function
@@ -83,15 +87,15 @@ module Make_Machine (B : Bytecode) = struct
 
 
     let rec applycast : stack_item -> kappa -> stack_item = fun v k ->
-        let (t,td) = eval k in 
-        begin match v with 
+        let (t,td) = eval k in
+        begin match v with
         | `CST b -> if subtype (constant b) (ceil t) then `CST b
             else `FAIL
-        | `PAIR (v1, v2) -> 
+        | `PAIR (v1, v2) ->
             let t1, t2 = pi1 t, pi2 t in
-            let k1, k2 = mk_kappa (t1,dom t1), mk_kappa (t2,dom t2) in  
+            let k1, k2 = mk_kappa (t1,dom t1), mk_kappa (t2,dom t2) in
             let cv1 = applycast v1 k1  in
-            let cv2 = applycast v2 k2 in 
+            let cv2 = applycast v2 k2 in
             begin match cv1, cv2 with
             | `FAIL, _ -> `FAIL
             | _, `FAIL -> `FAIL
@@ -100,45 +104,53 @@ module Make_Machine (B : Bytecode) = struct
             if td = t_bot then `FAIL
             else let kc = compose k k' in
             `CLS (c,e,kc,Strict)
+        | `ACLS (n,c,e,k',m) ->
+            if td = t_bot then `FAIL
+            else let kc = compose k k' in
+            `ACLS (n,c,e,kc,Strict)
 
         | _ -> failwith "wrong object to be cast" end
 
-    
-    module Print = struct 
+
+    module Print = struct
         let rec show_stack_value : stack_item -> string = function
         | `CST b -> pp_b b
-        | `CLS (btc, env, ts, m) -> 
+        | `CLS (btc, env, ts, m) ->
             Printf.sprintf "C(%s, %s, %s, %s)"
-            (show_bytecode 2 btc) (show_env 1 true env)
+            (show_bytecode 2 btc) (show_env 1  env)
+            (show_kappa ts) (show_mark m)
+        | `ACLS (n,btc, env, ts, m) ->
+            Printf.sprintf "C_%i(%s, %s, %s, %s)" n
+            (show_bytecode 2 btc) (show_env 1  env)
             (show_kappa ts) (show_mark m)
         | `TYP k -> show_kappa k
         | `FAIL -> "Fail"
-        | `PAIR (v1, v2) -> 
+        | `PAIR (v1, v2) ->
             Printf.sprintf "(%s, %s)" (show_stack_value v1)
             (show_stack_value v2)
 
-        and show_env_value : int -> stack_item -> string = 
+        and sh_env_v : int -> stack_item -> string =
         function
-        | 2 -> show_stack_value  
+        | 2 -> show_stack_value
         | 0 -> (fun _ -> "_")
         | 1 -> show_stack_value_1
         | _ -> failwith "wrong verbose argument"
 
         and show_result : stack_item -> string = function
-        | `CST b -> 
+        | `CST b ->
             Printf.sprintf "%s = %s" (pp_tau (constant b)) (pp_b b)
-        | `CLS (_,_, k,_) -> 
+        | `CLS (_,_, k,_) ->
             let (t,_) = eval k in
             Printf.sprintf "%s = <fun>" (pp_tau t)
         | `FAIL -> "Fail"
-        | `PAIR (v1, v2) as v -> 
+        | `PAIR (v1, v2) as v ->
             Printf.sprintf "%s = (%s, %s)" (pp_tau @@ typeof v)
             (show_result v1) (show_result v2) 
         | _ -> failwith "not a return value"
 
-        and show_env verb : bool -> env -> string = fun inline e ->
-            let sep = if inline then " . " else "\n\t     " in
-            List.fold_left (fun s v -> s ^ sep ^ (show_env_value verb v)) "" e
+        and show_env verb ?inline:(i=true) : env -> string = fun e ->
+            let sep = if i then " . " else "\n\t     " in
+            String.concat sep (List.map (fun v -> sh_env_v verb v) e)
         (* fun verb inline env ->
             let lenv = List.of_seq (Env.to_seq env) in
             let sep = if inline then " . " else "\n\t     " in
@@ -146,23 +158,22 @@ module Make_Machine (B : Bytecode) = struct
             "{ " ^ String.concat sep
                 (List.map
                     (fun (v,sv) -> Printf.sprintf "(%s := %s)"
-                    (pp_var v) (show_env_value verb sv)) 
+                    (pp_var v) (sh_env_v verb sv)) 
                     lenv) ^ " }" *)
 
-        and show_dump_item : dump_item -> string = function
+        and show_dump_item verb : dump_item -> string = function
         | Boundary t -> Printf.sprintf "<%s>" (show_kappa t)
-        | Frame (_,e) -> Printf.sprintf "([code], %s)" (show_env 1 true e)
+        | Frame (_,e) -> Printf.sprintf "([code], %s)" (show_env verb  e)
 
-        and show_dump : dump -> string =
+        and show_dump verb : dump -> string =
         fun d ->
-            (String.concat "\n\t   "
-            (List.map show_dump_item d))
+            (String.concat "\n\n\t   "
+            (List.map (show_dump_item verb) d))
 
         and show_stack_value_1 : stack_item -> string = function
         | `CST b -> pp_b b
-        | `CLS (_,env,bnd,_) -> Printf.sprintf "C(...,%s, %s)" 
-            (show_env 0 true env) 
-            @@ show_kappa bnd
+        | `CLS (c,env,bnd,_) -> Printf.sprintf "[c[%i],e[%i],%s]" 
+            (List.length c) (List.length env) (show_kappa bnd)
         | `TYP t -> show_kappa t
         | `FAIL -> "Fail" 
         | `PAIR (v1, v2) -> 
@@ -189,7 +200,6 @@ module Make_Machine (B : Bytecode) = struct
             let equal a b = match a, b with 
             | ACC _, ACC _ | CST _, CST _
             | CLS _, CLS _ 
-            (* | RCL _, RCL _ *)
             | LET , LET  | TYP _, TYP _
             | END , END  | TCA _, TCA _
             | IFZ _, IFZ _ -> true
@@ -292,15 +302,14 @@ module Make_Machine (B : Bytecode) = struct
             met.casts <- (!(run_params.step), (count_cast s)) :: met.casts;
             run_params.metrics <- met;
             if c != [] then let instr = List.hd c in
-            let cnt_inst =  
+            let cnt_inst =
                 (try MetricsEnv.find met.instructions instr
                 with Not_found -> 0) in
             MetricsEnv.replace met.instructions instr (cnt_inst+1)
             end
 
-         
         let delim n i =
-            let si = string_of_int i in 
+            let si = string_of_int i in
             let d = String.length si in
             String.init (n+1-d) (fun _ -> ' ')
 
@@ -312,39 +321,40 @@ module Make_Machine (B : Bytecode) = struct
         let print_debug_stack run_params s =
             let stack_size = List.length s in
             if !(run_params.verbose) >= 1
-            then 
+            then
             let d = delim !(run_params.delim) stack_size in
-            let ssize = string_of_int stack_size in 
+            let ssize = string_of_int stack_size in
             let strstack = show_stack (firstk 20 s) !(run_params.verbose) in
             Printf.printf "Stack[%s]:%s%s\n" ssize d strstack
-            else 
-            Printf.printf "Stack[%i]\n" (stack_size) 
+            else
+            Printf.printf "Stack[%i]\n" (stack_size)
 
         let print_debug_code run_params s =
             let stack_size = List.length s in
             if !(run_params.verbose) >= 1
-            then Printf.printf "Code [%i]:%s%s\n" (stack_size) 
-            (delim !(run_params.delim) stack_size) 
+            then Printf.printf "Code [%i]:%s%s\n" (stack_size)
+            (delim !(run_params.delim) stack_size)
             (show_bytecode !(run_params.verbose) (firstk 7 s))
             else Printf.printf "Code [%i]\n" (stack_size)
 
         let print_debug_env run_params s =
             let stack_size = env_length s in
             if stack_size < 20 && !(run_params.verbose) >= 1
-            then Printf.printf "Env  [%i]:%s%s\n" 
+            then Printf.printf "Env  [%i]:%s%s\n"
             (stack_size)
-            (delim !(run_params.delim) stack_size) 
-            (show_env !(run_params.verbose) false s)
-            else Printf.printf "Env  [%i]\n" (stack_size) 
+            (delim !(run_params.delim) stack_size)
+            (show_env !(run_params.verbose) ~inline:false s)
+            else Printf.printf "Env  [%i]\n" (stack_size)
 
         let print_debug_dump run_params s =
             let stack_size = dump_length s in
             if !(run_params.verbose) >= 1
-            then Printf.printf "Dump [%i]:%s%s\n" (stack_size)
-            (delim !(run_params.delim) stack_size) 
-            (show_dump (firstk 4 s))
-            else Printf.printf "Dump [%i]\n" (stack_size) 
-        
+            then Printf.printf "Dump [%i][%i][#casts=%i]:\n\t  %s%s\n" (List.length s) (stack_size)
+            (count_bound s)     (delim !(run_params.delim) stack_size)
+            (show_dump !(run_params.verbose) (firstk 4 s))
+            else Printf.printf "Dump [%i][%i][casts=%i]\n" (List.length s) (stack_size)
+            (count_bound s)
+
         let print_debug_run run_params  = function
             | c, e, s, d -> 
             Printf.printf "==={%i}========================================================================\n" !(run_params.step);
@@ -360,6 +370,7 @@ module Make_Machine (B : Bytecode) = struct
     end
 
     module Transitions = struct
+        open Print
         open MetricsDebug
 
         exception Machine_Stack_Overflow of int
@@ -373,69 +384,73 @@ module Make_Machine (B : Bytecode) = struct
             then raise (Dump_Stack_Overflow !(run_params.step))
             else if env_length e > !(run_params.max_env)
             then raise (Env_Overflow !(run_params.step))
-            
 
-        let run_procedures state = 
+        let run_procedures state =
         begin
             run_params.step := !(run_params.step)+1;
             if !(run_params.monitor) then gather_metrics run_params state;
             if !(run_params.debug) then print_debug_run run_params state;
             run_check run_params state;
             let ref_state = ref state in
-                if !(run_params.step_mode) 
+                if !(run_params.step_mode)
                 && !(run_params.step) >= !(run_params.step_start) then
-                begin 
+                begin
                     run_params.debug := true;
-                    let cmd = read_line () in 
-                    if cmd = "b" then 
+                    let cmd = read_line () in
+                    if cmd = "b" then
                         (begin
                         ref_state := List.hd run_params.states;
                         run_params.states <- List.tl run_params.states;
                         run_params.step := !(run_params.step)-2
                         end)
+                    else if cmd = "2" then
+                        run_params.verbose := 2
+                    else if cmd = "1" then
+                        run_params.verbose := 1
+                    else if cmd = "0" then
+                        run_params.verbose := 0
                     else run_params.states <- state :: run_params.states
                 end;
                 !ref_state
         end
 
-      
+
         (* let cast : v -> kappa   *)
 
-        let run code env = 
+        let run code env =
             let rec aux : state -> state = fun state ->
 #ifndef BENCH
-            let state = run_procedures state in 
+            let state = run_procedures state in
+#endif
+#ifdef MONITOR
+            gather_metrics run_params state;
 #endif
             match state with
                 | ACC n :: c, e, s, d ->
                     aux (c, e, (access e n) :: s, d)
 
-                | CST b :: c, e, s, d -> 
+                | CST b :: c, e, s, d ->
                     aux (c, e, `CST b :: s, d)
 
                 | CLS (c', k) :: c, e, s, d ->
                     let rec cls = `CLS (c',cls::e,k,Static) in
                     aux (c, e, cls::s, d)
-                
-                (* | RCL (f, x, c', k) :: c, e, s, d ->
-                    let e' = Env.copy e in
-                    let () = Env.replace e' f @@ `CLS (x, c', e', k, Static) in
-                    aux (c, e, `CLS (x, c', e', k, Static) :: s, d) *)
-(* 
-                | LER f :: c, e, v :: s, d -> 
-                    let () = Env.replace e f v in
-                    aux (c, e, s, d) *)
 
                 | TYP k :: c, e, s, d ->
                     aux (c, e, `TYP k :: s, d)
 
                 | APP :: c, e,  v :: `CLS (c', e', _, Static)  :: s, d ->
+(* #ifndef DEBUG
+                    let () = print_endline "\n=====\nDebug:" in
+                    let () = Printf.printf "Dump extended with code: %s" (show_bytecode 1 c) in
+                    let () = Printf.printf "and environment e[%i] = %s" (List.length e) (show_env 1  e) in
+#endif *)
                     aux (c', v :: e', s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
-                    let kr = mk_app k (typeof v) in 
-                    let kd = mk_dom k in 
-                    aux (CAS :: APP :: CAS :: c, e, 
+                    let kr = mk_app k (typeof v) in
+                    let kd = mk_dom k in
+                    aux (CAS :: APP :: CAS :: c, e,
                         v :: `TYP kd :: `CLS (c', e', k, Static) :: `TYP kr :: s, d)
 
                 | TAP :: _, _,  v :: `CLS (c', e', _, Static) :: s, d ->
@@ -443,18 +458,14 @@ module Make_Machine (B : Bytecode) = struct
 
                 | TAP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
                     let kr = mk_app k (typeof v) in
-                    let kd = mk_dom k in  
+                    let kd = mk_dom k in
                     aux (CAS :: TCA kr :: c, e, v :: `TYP kd :: `CLS (c', e', k, Static) :: s, d)
 
                 | RET :: c, e, v :: s, Boundary k :: d ->
-                    aux (CAS :: RET :: c, e, v :: `TYP k :: s, d) 
-                
+                    aux (CAS :: RET :: c, e, v :: `TYP k :: s, d)
+
                 | RET :: _, _, v :: s, Frame (c', e') :: d ->
                     aux (c', e', v :: s, d)
-
-                (* this shouldn't happen as creating a fail terminates execution *)
-                (* | (TAP|APP|TCA _) :: c, e,  (`FAIL :: _ :: s | _ :: `FAIL :: s), d -> 
-                    aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d) *)
 
                 | TCA k::_, _, v::`CLS (c',e',_,Static)::s, d ->
                     aux (c', v::e', s, dump k d)
@@ -466,36 +477,36 @@ module Make_Machine (B : Bytecode) = struct
 
                 | CAS :: c, e, `CST b :: `TYP k :: s, d ->
                     let (t,_) = eval k in
-                    if subtype (constant b) (ceil t) 
+                    if subtype (constant b) (ceil t)
                     then aux (c, e, `CST b :: s, d)
                     else aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d)
-                    
+
                 | CAS :: c, e, `CLS (c',e',k,_) :: `TYP k':: s, d ->
                     let (_,t2') = eval k' in
-                    if is_bottom t2' then 
+                    if is_bottom t2' then
                     aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d)
                     else
                     let kc = compose k k' in
                     aux (c, e, `CLS (c',e',kc,Strict) :: s, d)
-                
+
                 | CAS :: c, e,  (`PAIR (_,_) as v) :: `TYP k:: s, d ->
-                    let v' = applycast v k in 
+                    let v' = applycast v k in
                     begin match v' with
                     | `FAIL -> aux ([], empty_env, `FAIL :: s, Frame (c,e) :: d)
                     | _ -> aux (c, e, v' :: s, d) end
 
                 | LET :: c, e, v :: s, d ->
                     aux (c, v :: e, s, d)
-                
+
                 | END :: c, v :: e, s, d ->
                     aux (c, e, s, d)
 
                 | MKP :: c, e, v2 :: v1 :: s, d ->
                     aux (c, e, `PAIR (v1, v2) :: s, d)
 
-                | FST :: c, e, `PAIR (v1, _) :: s, d -> 
+                | FST :: c, e, `PAIR (v1, _) :: s, d ->
                     aux (c, e, v1 :: s, d)
-              
+
                 | SND :: c, e, `PAIR (_, v2) :: s, d ->
                     aux (c, e, v2 :: s, d)
 
@@ -513,15 +524,15 @@ module Make_Machine (B : Bytecode) = struct
                     aux (c, e, `CST ieq :: s, d)
 
                 | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
-                    aux (c, e, `CST (Integer (add i1 i2)) :: s, d) 
+                    aux (c, e, `CST (Integer (add i1 i2)) :: s, d)
 
                 | MOD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
-                    aux (c, e, `CST (Integer (i2 mod i1)) :: s, d) 
-                
-                | SUB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
-                    aux (c, e, `CST (Integer (sub i2 i1)) :: s, d) 
+                    aux (c, e, `CST (Integer (i2 mod i1)) :: s, d)
 
-                | IFZ (c1, _) :: c, e, `CST b :: s, d 
+                | SUB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
+                    aux (c, e, `CST (Integer (sub i2 i1)) :: s, d)
+
+                | IFZ (c1, _) :: c, e, `CST b :: s, d
                     when b = Primitives.zero ->
                     aux (c1 @ c, e, s, d)
 
@@ -531,30 +542,31 @@ module Make_Machine (B : Bytecode) = struct
                 | s -> s
 
             in aux (code, env, [], [])
-    
+
     end
+
 
     open Transitions
     open MetricsDebug
     open Print
 
-        
     let run_init code =
 #ifndef BENCH
         let () = if !(run_params.debug) then print_endline "Run initialization" in
 #endif
         run code []
 
-    let finish = function 
+    let finish = function
         | _, _, [v], _ -> v
+        | [], _, `FAIL::_,_ -> `FAIL
         | _, _, _ :: _ :: _, _ -> failwith "unfinished computation"
         | _ -> failwith "no return value"
 
 
-    let wrap_run : bytecode -> parameters_structure -> unit = 
+    let wrap_run : bytecode -> parameters_structure -> unit =
         fun code params ->
 #ifndef BENCH
-            begin 
+            begin
             run_params.debug := !(params.debug);
             run_params.verbose := !(params.verbose);
             run_params.step_mode := !(params.step_mode);
@@ -564,41 +576,33 @@ module Make_Machine (B : Bytecode) = struct
 #endif
             let v = finish (run_init code) in
 #ifndef BENCH
-            let () = 
+            let () =
 #endif
             print_string "- : " ; print_string @@ show_result v; print_endline ""
 #ifndef BENCH
-            in 
+            in
             if !(params.monitor) then
                 begin
                 print_endline "\n===Monitor===\n=============\n";
                 let met = run_params.metrics in
-                let (step_max, size_max) = max cmp_tuple met.stack_sizes in
-                Printf.printf "Stack max size:               %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.dump_sizes in
-                Printf.printf "Dump env max size:       %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.dump_frames in
-                Printf.printf "Dump length max :       %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.dump_frames in
-                Printf.printf "Dump casts max :       %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.dump_bounds in
-                Printf.printf "Longest proxy size:           %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.casts in
-                Printf.printf "Largest amount of casts size: %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let (step_max, size_max) = max cmp_tuple met.env_sizes in
-                Printf.printf "Env max size: %s at step %s\n" 
-                (string_of_int size_max) (string_of_int step_max);
-                let instr_counts = met.instructions in
+                let print_max (ls,fmt) = 
+                    let (step_max, size_max) = max cmp_tuple ls in
+                    Printf.printf fmt (string_of_int size_max) (string_of_int step_max) in
+
+                List.map print_max
+                [met.stack_sizes, "Stack max size:               %s at step %s\n";
+                 met.dump_sizes, "Dump env max size:       %s at step %s\n";
+                 met.dump_frames, "Dump length max :       %s at step %s\n";
+                 met.dump_bounds, "Dump casts max :       %s at step %s\n"; 
+                 met.longest_proxies, "Longest proxy size:           %s at step %s\n" ;
+                 met.casts, "Largest amount of casts size: %s at step %s\n" ;
+                 met.env_sizes, "Env max size: %s at step %s\n"];
+
+                (* let instr_counts = met.instructions in
                 let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in
                 List.iter (fun (by, cnt) ->
-                        printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts;
-                print_endline "\n=============\n=============";
+                        printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts; *)
+                print_endline "\n=============\n============="; 
                 run_params.metrics <- init_metrics ()
                 end
 #endif

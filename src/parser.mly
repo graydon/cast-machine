@@ -5,12 +5,12 @@
 	module CD = Cduce_lib
 	open Types
 	open Primitives
+	
 %}
 
 /* Token declarations. */
 
 %token CAP CUP QMARK
-%token STREAM
 %token UNIT
 %token DOT COLON COMMA BACKTICK
 %token PAROPEN PARCLOSE
@@ -24,15 +24,18 @@
 %token LET EQ IN 
 %token IF THEN ELSE PLUS MINUS MOD
 
-%left IN
 %left PLUS MINUS EQ
+%left IN
 %left IDENT
 %nonassoc PARCLOSE ELSE FUN
+%nonassoc ARROW
+%nonassoc CAP CUP
+%nonassoc CAST 
 %left TIMES 
-%nonassoc CAST
+%nonassoc MOD
 %nonassoc PAT PAROPEN
-%left SUCC PRED
-
+%left SUCC PRED SND FST
+%nonassoc UNIT BACKTICK
 
 
 /* Starting production. */	
@@ -71,8 +74,6 @@ expr:
 			{ b }
 	| l=let_pattern
 			{ l }
-	| UNIT 
-			{ Cst (parse_cst "[]") }
 
 primop:	
 	| PRED e=expr 
@@ -101,6 +102,8 @@ a_expr:
 			{ Var v }
 	| c=pat_const
 			{ Cst c }
+	| UNIT 
+			{ Cst (parse_cst "[]") }
 
 fun_expr:
 	| FUN UNIT fun_delim e=expr 
@@ -145,40 +148,23 @@ binop:
 	
 
 let_pattern:
+	| LET PAROPEN x=var COMMA y=var PARCLOSE EQ e1=expr IN e2=expr
+			{ LetP ((x,y), e1, e2) }
 	| LET x=var EQ e1=expr IN e2=expr
 			{ Let (x, e1, e2) }
-	| LET f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
+	| LET ioption(REC) f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
 			{ Let (f, Mu (t, f, x, e1), e2) }
-	| LET f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
+	| LET ioption(REC) f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
 			{ Let (f, Mu (cap t1 t2, f, x, e1), e2) }
-	| LET f=var x=var EQ e1=expr IN e2=expr
+	| LET ioption(REC) f=var x=var EQ e1=expr IN e2=expr
 			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
 	| LET REC f=var EQ e1=expr IN e2=expr
 			{ match e1 with
 				| Mu (t, _, x, e) -> Let (f, Mu (t, f, x, e), e2)
-			  	| _ -> failwith "not a function" }
-	| LET REC f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Mu (t, f, x, e1), e2) }
-	| LET REC f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
-			{ Let (f, Mu (cap t1 t2, f, x, e1), e2) }
-	| LET REC f=var x=var EQ e1=expr IN e2=expr
-			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
-	| LET REC f=var EQ e1=fun_expr IN e2=expr
-			{ match e1 with
-			  | Mu (t, _, x, e) -> Let (f, Mu (t, f, x, e), e2)
-			  | _ -> failwith "not a function" }
-			
-(*
-and_let: 
-	| LET REC f=var COLON t=pat EQ FUN x=var fun_delim e1=expr AND e3=let_pattern IN e2=expr 
-			{ match e3 with
-			  | Letrec (g, e1', e2') -> 
-			  		Letrec (f, Lam (t, x, Letrec(g, e1',), e2) } *)
-
+			  	| e1' -> Let (f, e1', e2) }
+	
 
 fun_delim : DOT {} | ARROW {}
-
-
 
 var:
 	| v=IDENT 
@@ -197,23 +183,25 @@ pat_list:
 		{ p ^ ps }
 
 pat:
+	| t=a_pat
+		{ t }
 	| BRACKOPEN ps=pat_list BRACKCLOSE
 		{ parse_t ("[" ^ ps ^ "]") }
-	| STREAM t=PAT
-		{ parse_t ("Stream" ^ t) }
-	| QMARK
-		{ qmark () }
-	| UNIT 
-		{ parse_t "[]" }
-	| t1=pat ARROW t2=pat
+	| t1=pat TIMES t2=a_pat
+		{ mk_times t1 t2 }
+	| t1=pat ARROW t2=a_pat
 		{ mk_arrow t1 t2 }
 	| t1=pat CUP t2=pat
 		{ cup t1 t2 }
 	| t1=pat CAP t2=pat
 		{ cap t1 t2 }
-	| PAROPEN t=pat PARCLOSE
-		{ t }
 	| BACKTICK id=IDENT
 		{ parse_t ("`" ^ id) } 
-	| t=PAT    			    
-		{ parse_t t }   
+
+a_pat:
+	| PAROPEN p=pat PARCLOSE
+		{ p }
+	| p=PAT
+		{ parse_t p }
+	| QMARK
+		{ qmark () }

@@ -63,7 +63,7 @@ let newline         =  ('\010' | '\013' | "\013\010")
 let blank           = [' ']
 (* let decimal_literal = '-'? ['0'-'9'] ['0'-'9' '_']* *)
 let ident           = '$'? ['a'-'z' '_'] ['A'-'Z' 'a'-'z' '0'-'9' '\'' '_']*
-let struct		 			= ' '* ("->"|"|"|"&"|'\\'|"--"|";") ' '*
+let struct		 			= ' '* ("|"|"&"|'\\'|"--"|";") ' '*
 (*items: strings, atoms, typevars, intervals *)
 let ppcst						= (['0'-'9' '_']|"--")+			
 (* let ppxml 					= '['	(ppcst | ['[' ']' ' '])* ']'  *)
@@ -77,15 +77,11 @@ let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										(* |"Namespaces"|"Abstract"
 										|"Caml_int"|"In_channel"
 										|"Out_channel"  *)
-let ppfunvar				= "Stream" ' '* '(' ppitem ')' 
+let ppstream				= "Stream" ' '* '(' ppitem ')' 
 (*delimiters: parenthesis, brackets, braces *)
 let dopen 					= ['(' '[' '{']
 let dclose 					= [')' ']' '}']
-let ppitems 				= (dopen ' '* ppitem ' '* dclose) | ppitem
-let ppatoms					= (dopen ppitems struct ppitems dclose)
-										| (ppitems struct ppitems) | ppitems
-let pat 						= ppfunvar | ppatoms | (ppatoms | (dopen+ ppatoms dclose*)) (struct (dopen* ppatoms dclose*))+
-let funpat 					= ("fun"|'\\') ' '+ '(' pat ')'
+let pat 						= ppitem | ppstream
 
 rule token = parse
 	| newline					{ incr_linenum lexbuf; token lexbuf }

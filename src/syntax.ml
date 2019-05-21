@@ -56,15 +56,17 @@ module type Cast_Expr = sig
     type castkind
     
     type e = 
-      | Var of var
+            | Var of var
       | Cst of b
       | Pair of e * e
       | Let of var * e * e
+      | LetP of (var * var) * e * e
       | Letrec of var * e * e
       | Mu of tau * var * var * e
       | App of e * e
+      | Apply of int * tau * var * e * var list * e list
       | Cast of e * castkind
-      | Succ of e | Pred of e | Fst of e | Snd of e
+      | Succ of e | Pred of e | Fst of e | Snd of e 
       | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
       | Ifz of e * e * e
       | Eq of e * e
@@ -91,9 +93,11 @@ struct
       | Cst of b
       | Pair of e * e
       | Let of var * e * e
+      | LetP of (var * var) * e * e
       | Letrec of var * e * e
       | Mu of tau * var * var * e
       | App of e * e
+      | Apply of int * tau * var * e * var list * e list
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e 
       | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
@@ -176,6 +180,9 @@ module Eager = struct
                 Printf.sprintf "succ %s" (pprint_e e)
             | Pred (e) ->
                 Printf.sprintf "pred %s" (pprint_e e)
+            | LetP ((x,y),e1,e2) ->
+                Printf.sprintf "letP (%s,%s) = %s in\n%s"
+                    (pp_var x) (pp_var y) (pprint_e e1) (aux "\t" e2)
             | Mult (e1, e2) ->
                 Printf.sprintf "%s * %s" (pprint_e e1) (pprint_e e2)
             | Plus (e1, e2) ->
@@ -221,6 +228,7 @@ struct
       | Var of var
       | Cst of b
       | Let of var * e * e
+      | LetP of (var * var) * e * e
       | Mu of tau * var * var * e
       | App of e * e
       | Cast of e * castkind
