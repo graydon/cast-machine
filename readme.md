@@ -42,6 +42,8 @@ The options are:
     --stepmode [integer]    : jump to step <integer> in step-mode
     --load filename         : load a file (see directory /tests)
     --monitor               : print monitor output
+    --symbolic              : use symbolic casts
+    --symbolic-cap          : use symbolic casts with intersections
 ```
   
 
