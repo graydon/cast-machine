@@ -1,0 +1,38 @@
+let make_stream : Int -> ([] -> Stream(Int)) -> Stream(Int) = fun hd ->
+    fun (([] -> Stream(Int)) -> Stream(Int)) thunk -> 
+    (hd, thunk) in
+
+let stream_first st = fst st in
+
+let stream_rest st = (snd st) () in
+
+let stream_unfold : Stream(Int) -> (Int * Stream(Int)) = fun st ->
+    let (hd, tl) = st in (hd, tl ()) in
+
+let rec stream_get = fun st i ->
+    let (hd, tl) = stream_unfold st in
+    if i then hd
+    else stream_get tl (i-1) in
+
+let rec count_from n = 
+    make_stream n (fun () -> count_from (n+1)) in
+
+let rec sift = fun n st ->
+    let (hd, tl) = st in
+    if (hd mod n) then sift n (tl ()) 
+    else make_stream hd (fun () -> sift n (tl ())) in
+
+
+(* let's say i don't know the static type of st *)
+(* however, stream_unfold needs to receive a Stream(Int) *)
+(* and make_stream too *)
+
+let rec sieve : ? -> ? = fun st ->
+    let (hd, tl) = stream_unfold (st % Stream(Int)) in
+    (make_stream hd (fun () -> sieve (sift hd tl))) % ? in
+
+let primes = sieve (count_from 2) in
+
+let n = 1000 in 
+
+stream_get primes n;;

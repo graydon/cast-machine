@@ -4,12 +4,17 @@
 
 Working on `ocaml 4.07.0`.
 
-Main dependencies: 
+Dependencies: 
 - **opam**
-- **utop**
-- **dune**
-- **cduce** version 1.0, either the **cduce-next** or the **setvariants** branches of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce) work fine. It should be installed some place where ocamlfind can pick it up. From a clone of the repo, `make install` puts cduce_lib inside `~/.opam/<switch-name>/cduce/` which is in dune's path.
+- **cduce** version 1.0, either the **cduce-next** or the **setvariants** branches of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce)
 - **menhir**
+- **cppo**
+- **core_bench** for benchmarking
+
+Install dependencies:
+```
+    opam install menhir cppo core_bench
+```
 
 To build, use the makefile (which is an interface to **dune**):
 ```

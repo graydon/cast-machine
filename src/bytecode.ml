@@ -1,6 +1,7 @@
 open Syntax
 open Types
 open Types.Print
+open Primitives
 open Syntax.CDuce_Gradual_Types
 
 
@@ -8,9 +9,12 @@ module type Cast_Representation = sig
     type kappa
     val show_kappa : kappa -> string
     val eval : kappa -> tau * tau
+    val eval_1 : kappa -> tau
+    val eval_2 : kappa -> tau
     val mk_kappa : tau * tau -> kappa
     val mk_dom : kappa -> kappa
     val mk_app : kappa -> tau -> kappa
+    val compose : kappa -> kappa -> kappa
 end
 
 module Pair : Cast_Representation = struct
@@ -18,9 +22,13 @@ module Pair : Cast_Representation = struct
     let show_kappa (t1, t2) = 
         Printf.sprintf "<%s, %s>" (pp_tau t1) (pp_tau t2)
     let eval = fun x -> x
+    let eval_1 = fun (t,_) -> t
+    let eval_2 = fun (_,t) -> t
     let mk_kappa = fun x -> x
     let mk_dom (_,t2) = (t2,dom t2)
     let mk_app (t1,_) t = let tr = result t1 t in (tr,dom tr) 
+    let compose k1 k2 =let (t1,t2) = eval k1 in
+        let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
 end
 
 module Symbol : Cast_Representation = struct
@@ -29,10 +37,20 @@ module Symbol : Cast_Representation = struct
         | Dom of kappa 
         | App of kappa * tau
 
+    let rec eval_1 = function
+        | Pair (t1, _) -> t1
+        | Dom k -> eval_2 k
+        | App (k,t) -> let t1 = eval_1 k in result t1 t
+
+    and eval_2 = function
+        | Pair (_, t2) -> t2
+        | Dom k -> dom (eval_2 k)
+        | App (k,t) -> let t1 = eval_1 k in dom (result t1 t)
+
     let rec eval = function
         | Pair (t1, t2) -> (t1, t2)
-        | Dom k -> let (_, t2) = eval k in (t2, dom t2)
-        | App (k,t) -> let (t1, _) = eval k in
+        | Dom k -> let t2 = eval_2 k in (t2, dom t2)
+        | App (k,t) -> let t1 = eval_1 k in
             let tr = result t1 t in (tr, dom tr)
 
     let show_kappa = fun k -> 
@@ -42,6 +60,48 @@ module Symbol : Cast_Representation = struct
     let mk_kappa (t1,t2) = Pair (t1,t2)
     let mk_dom k = Dom k 
     let mk_app k t = App (k,t)
+    let compose k1 k2 = let (t1,t2) = eval k1 in
+        let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
+end
+
+
+module Symbol_Cap : Cast_Representation = struct
+
+    type kappa = Pair of tau * tau 
+        | Dom of kappa 
+        | App of kappa * tau
+        | Cap of kappa * kappa
+
+    let rec eval_1 = function
+        | Pair (t1, _) -> t1
+        | Dom k -> eval_2 k
+        | App (k,t) -> let t1 = eval_1 k in result t1 t
+        | Cap (k1,k2) -> let t1 = eval_1 k1 in
+            let t2 = eval_1 k2 in cap t1 t2
+
+    and eval_2 = function
+        | Pair (_, t2) -> t2
+        | Dom k -> dom (eval_2 k)
+        | App (k,t) -> let t1 = eval_1 k in dom (result t1 t)
+        | Cap (k1,k2) -> let t1' = eval_2 k1 in
+            let t2' = eval_2 k2 in cap t1' t2'
+
+    let rec eval = function
+        | Pair (t1, t2) -> (t1, t2)
+        | Dom k -> let t2 = eval_2 k in (t2, dom t2)
+        | App (k,t) -> let t1 = eval_1 k in
+            let tr = result t1 t in (tr, dom tr)
+        | Cap (k1,k2) -> let (t1,t1') = eval k1 in
+            let (t2,t2') = eval k2 in (cap t1 t2, cap t1' t2')
+
+    let show_kappa = fun k -> 
+        let (t1, t2) = eval k in 
+        Printf.sprintf "<%s, %s>" (pp_tau t1) (pp_tau t2)
+
+    let mk_kappa (t1,t2) = Pair (t1,t2)
+    let mk_dom k = Dom k 
+    let mk_app k t = App (k,t)
+    let compose k1 k2 = Cap (k1,k2)
 end
 
 module type Bytecode = sig
@@ -159,6 +219,7 @@ end
 
 module Bytecode_Eager = Make_Bytecode(Pair)
 module Bytecode_Symbolic = Make_Bytecode(Symbol)
+module Bytecode_Symbolic_Cap = Make_Bytecode(Symbol_Cap)
 
 
 (* module Print = struct 

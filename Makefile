@@ -4,11 +4,11 @@ CDUCE := $(shell ocamlfind query cduce)
 
 main:
 	cppo ${CURDIR}/src/exec.cppo.ml -o ${CURDIR}/src/exec.ml
-	ocamlbuild -use-menhir -use-ocamlfind  -I src main.native \
+	ocamlbuild -use-menhir -use-ocamlfind -I src main.native \
 	-cflags '-w -58' \
 	-cflags '-I '${CDUCE} \
 	-lflags '-I '${CDUCE}' 'cduce_lib.cmxa  \
-	-package expat -package pxp -package curl,camlp4.lib,num,dynlink \
+	-package expat -package pxp -package curl,camlp4.lib,num,dynlink
 
 byte:
 	cppo ${CURDIR}/src/exec.cppo.ml -o ${CURDIR}/src/exec.ml
@@ -16,7 +16,10 @@ byte:
 	-cflags '-w -58' \
 	-cflags '-I '${CDUCE} \
 	-lflags '-I '${CDUCE}' 'cduce_lib.cma  \
-	-package expat -package pxp -package curl,camlp4.lib,num,dynlink \
+	-package expat -package pxp -package curl,camlp4.lib,num,dynlink
+
+top: main
+	ocamlmktop -use-ocamlfind -o toptest
 
 web:
 	ocamlbuild -use-menhir -use-ocamlfind \

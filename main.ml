@@ -11,6 +11,7 @@ let () = if Array.length (Sys.argv) > 1 then begin
       (if Array.mem "--time" Sys.argv then params.time := true);
       (if Array.mem "--help" Sys.argv then (print_endline "No help" ; raise Exit));
       (if Array.mem "--abstract" Sys.argv then params.abstract := true);
+      (if Array.mem "--symbolic-cap" Sys.argv then params.symbolic_cap := "go");
       (if Array.mem "--interpreter" Sys.argv then params.machine := "");
       (if Array.mem "--machine" Sys.argv then params.machine := "machine");
       (if Array.mem "--symbolic" Sys.argv then params.symbolic := "symbolic");
@@ -35,6 +36,15 @@ let eval_with_parameters params e =
     if !(params.symbolic) != "" then 
       let open Exec.Machine_Symbolic in 
       let open Compile.Compile_Symbolic in begin
+      let () = if !(params.debug) then print_endline "Compiling.." in
+      let e = transform e in
+      let btc = compile Nil e in
+      let () = if !(params.debug) then print_endline "Running bytecode.." in
+      (* let () = if !(params.debug) then print_endline (show_bytecode btc) in *)
+      wrap_run btc params end
+    else if !(params.symbolic_cap) != "" then 
+      let open Exec.Machine_Symbolic_Cap in 
+      let open Compile.Compile_Symbolic_Cap in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
       let e = transform e in
       let btc = compile Nil e in

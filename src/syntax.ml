@@ -133,6 +133,23 @@ module Eager = struct
         
         let sprintf = Printf.sprintf
 
+        let show_e : e -> string = function
+            | Var _ -> "Var"
+            | Cst _ -> "Cst"
+            | Pair _ -> "Pair"
+            | Mod _ -> "Mod"
+            | Mu _ -> "Mu"
+            | Eq _ -> "Eq"
+            | Ifz _ -> "Ifz"
+            | Let _ -> "Let"
+            | App _ -> "App"
+            | Letrec _ -> "Letrec"
+            | LetP (_, _, _) -> "LetP" 
+            |Apply (_, _, _, _, _, _)
+            |Cast (_, _)
+            |Succ _ -> "Succ"
+            |Pred _ -> "Pred"
+
         let rec pprint_e : e -> string = fun e ->
             let rec aux offset = function
             (* | Unit -> "()" *)

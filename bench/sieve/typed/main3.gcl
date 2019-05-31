@@ -1,0 +1,56 @@
+(* Module 1 : Stream Library *)
+(* Configuration : untyped *)
+
+let make_stream = fun hd thunk -> 
+    (hd, thunk) in
+
+let stream_first st = fst st in
+
+let stream_rest st = (snd st) () in
+
+let stream_unfold = fun st ->
+    let (hd, tl) = st in (hd, tl ()) in
+
+let rec stream_get = fun st i ->
+    let (hd, tl) = stream_unfold st in
+    if i then hd
+    else stream_get tl (i-1) in
+
+
+(* Module 2 : Sieve of Eratosthenes *)
+(* Configuration : typed *)
+
+(* All the functions from the Stream library require casts
+at the interface *)
+
+(* here, make_stream has type ? -> ? so its arguments are all cast to ? 
+and the result it returns has to be checked to be of type Stream(Int) like 
+the return type of count_from *)
+
+let rec count_from : Int -> Stream(Int) = fun n ->
+    let thunk = fun () -> count_from (n+1) in
+    let st = make_stream (n % ?) (thunk % ?)
+        in (st % Stream(Int)) in
+
+let rec sift : Int -> Stream(Int) -> Stream(Int) = fun n st ->
+    let (hd, tl) = stream_unfold (st % ?) in
+    if ((hd % Int) mod n) 
+    then sift n (tl % Stream(Int)) 
+    else 
+        let thunk = fun () -> sift n (tl % Stream(Int)) in
+        ((make_stream hd (thunk % ?)) % ?) in
+
+(* let's say i don't know the static type of st *)
+(* however, stream_unfold needs to receive a Stream(Int) *)
+(* and make_stream too *)
+
+let rec sieve : Stream(Int) -> Stream(Int) = fun st ->
+    let (hd, tl) = stream_unfold (st % ?) in
+    let thunk = fun () -> sieve (sift (hd % Int) (tl % Stream(Int))) in
+        ((make_stream hd (thunk % ?)) % ?) in
+
+let primes = sieve (count_from 2) in
+
+let n = 1000 in 
+
+stream_get (primes % ?) (n % ?);;

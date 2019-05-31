@@ -1,0 +1,16 @@
+let make_stream : Int -> ([] -> Stream(Int)) -> Stream(Int) = 
+    fun hd ->
+    fun thunk -> (hd, thunk) in
+
+let stream_first st = fst st in
+
+let stream_rest st = (snd st) () in
+
+let stream_unfold st = 
+    (stream_first st, stream_rest st) in
+
+let rec stream_get = fun st i ->
+    if i then stream_first st
+    else stream_get (stream_rest st) (i-1) in
+
+();;

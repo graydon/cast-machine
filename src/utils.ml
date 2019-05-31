@@ -3,6 +3,7 @@ type parameters_structure =
   {abstract : bool ref;
    debug : bool ref;
    symbolic : string ref;
+   symbolic_cap : string ref;
    machine: string ref;
    load_file : bool ref;
    verbose : int ref;
@@ -15,6 +16,7 @@ let params =
   {abstract = ref false;
   debug = ref false;
   symbolic = ref "";
+  symbolic_cap = ref "";
   machine = ref "machine";
   load_file = ref false;
   verbose = ref 1;

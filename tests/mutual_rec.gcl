@@ -5,7 +5,7 @@ let rec odd : Int -> ? =
         if n then `true
         else ((odd (n-1)) % Bool)
     in
-    if n then `false
+    if n then `false % ?
     else ((even (n-1)) % ?)
 in odd 1000;;
 

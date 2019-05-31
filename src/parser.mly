@@ -24,10 +24,10 @@
 %token LET EQ IN 
 %token IF THEN ELSE PLUS MINUS MOD
 
-%left PLUS MINUS EQ
 %left IN
 %left IDENT
 %nonassoc PARCLOSE ELSE FUN
+%left PLUS MINUS EQ
 %nonassoc ARROW
 %nonassoc CAP CUP
 %nonassoc CAST 
@@ -158,9 +158,15 @@ let_pattern:
 			{ Let (f, Mu (cap t1 t2, f, x, e1), e2) }
 	| LET ioption(REC) f=var x=var EQ e1=expr IN e2=expr
 			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
+	| LET ioption(REC) f=var x=var EQ e1=expr IN e2=expr
+			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
 	| LET REC f=var EQ e1=expr IN e2=expr
 			{ match e1 with
 				| Mu (t, _, x, e) -> Let (f, Mu (t, f, x, e), e2)
+			  	| e1' -> Let (f, e1', e2) }
+	| LET REC f=var COLON t1=pat EQ e1=expr IN e2=expr
+			{ match e1 with
+				| Mu (t, _, x, e) -> Let (f, Mu (cap t1 t, f, x, e), e2)
 			  	| e1' -> Let (f, e1', e2) }
 	
 

@@ -66,19 +66,19 @@ module Make_Machine (B : Bytecode) = struct
 
     type state = bytecode * env * stack * dump
 
+    let n_t_dyn = neg t_dyn
+
     let rec typeof : stack_item -> t = function
-        | `CST b -> cap (constant b) (t_dyn)
-        | `CLS (_, _, k, _) -> fst (eval k)
-        | `ACLS (_,_,_,k,_) -> fst (eval k)
-        | `PAIR (v1, v2) ->
-            let t1 = typeof v1 in
-            let t2 = typeof v2 in pair t1 t2
+        | `CST b -> cap (cap (constant b) (t_dyn)) n_t_dyn
+        | `CLS (_, _, k, _) -> eval_1 k
+        | `ACLS (_,_,_,k,_) -> eval_1 k
+        | `PAIR (v1, v2) -> pair (typeof v1) (typeof v2)
         | _ -> failwith "error: trying to take typeof of `TYP or `FAIL"
 
       (* parameter functions *)
-        let compose : kappa -> kappa -> kappa = fun k1 k2 ->
+        (* let compose : kappa -> kappa -> kappa = fun k1 k2 ->
             let (t1,t2) = eval k1 in
-            let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
+            let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4)) *)
 
         let dump : kappa -> dump -> dump = fun k -> function
         | [] -> [Boundary k]
@@ -140,7 +140,7 @@ module Make_Machine (B : Bytecode) = struct
         | `CST b ->
             Printf.sprintf "%s = %s" (pp_tau (constant b)) (pp_b b)
         | `CLS (_,_, k,_) ->
-            let (t,_) = eval k in
+            let t = eval_1 k in
             Printf.sprintf "%s = <fun>" (pp_tau t)
         | `FAIL -> "Fail"
         | `PAIR (v1, v2) as v ->
@@ -247,7 +247,7 @@ module Make_Machine (B : Bytecode) = struct
         let run_params =
                 {run = ref true;
                 step = ref 0;
-                max_stack = ref 500;
+                max_stack = ref 1000;
                 max_env = ref 1000;
                 verbose = ref 2;
                 delim = ref 2;
@@ -373,15 +373,17 @@ module Make_Machine (B : Bytecode) = struct
         open Print
         open MetricsDebug
 
-        exception Machine_Stack_Overflow of int
-        exception Dump_Stack_Overflow of int
+        exception Machine_Stack_Overflow of int * int
+        exception Dump_Stack_Overflow of int * int
         exception Env_Overflow of int
 
         let run_check run_params (_, e, s, d) =
             if List.length s > !(run_params.max_stack) 
-            then raise (Machine_Stack_Overflow !(run_params.step))
+            then raise (Machine_Stack_Overflow (List.length s, !(run_params.step)))
             else if dump_length d > !(run_params.max_stack) * !(run_params.max_env)
-            then raise (Dump_Stack_Overflow !(run_params.step))
+            then raise (Dump_Stack_Overflow (dump_length d, !(run_params.step)))
+            else if List.length d > !(run_params.max_stack)
+            then raise (Dump_Stack_Overflow (List.length d, !(run_params.step)))
             else if env_length e > !(run_params.max_env)
             then raise (Env_Overflow !(run_params.step))
 
@@ -426,8 +428,12 @@ module Make_Machine (B : Bytecode) = struct
             gather_metrics run_params state;
 #endif
             match state with
+                | c, `FAIL ::e, s, d ->
+                    aux ([],empty_env,`FAIL::s,Frame(c,e)::d)
+
                 | ACC n :: c, e, s, d ->
                     aux (c, e, (access e n) :: s, d)
+
 
                 | CST b :: c, e, s, d ->
                     aux (c, e, `CST b :: s, d)
@@ -450,8 +456,8 @@ module Make_Machine (B : Bytecode) = struct
                 | APP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
                     let kr = mk_app k (typeof v) in
                     let kd = mk_dom k in
-                    aux (CAS :: APP :: CAS :: c, e,
-                        v :: `TYP kd :: `CLS (c', e', k, Static) :: `TYP kr :: s, d)
+                    let v' = applycast v kd in
+                        aux (c', v'::e', `TYP kr::s, Frame(CAS::c,e)::d)
 
                 | TAP :: _, _,  v :: `CLS (c', e', _, Static) :: s, d ->
                     aux (c', v :: e', s, d)
@@ -459,7 +465,8 @@ module Make_Machine (B : Bytecode) = struct
                 | TAP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
                     let kr = mk_app k (typeof v) in
                     let kd = mk_dom k in
-                    aux (CAS :: TCA kr :: c, e, v :: `TYP kd :: `CLS (c', e', k, Static) :: s, d)
+                    let v' = applycast v kd in
+                        aux (c', v'::e', s, dump kr d)
 
                 | RET :: c, e, v :: s, Boundary k :: d ->
                     aux (CAS :: RET :: c, e, v :: `TYP k :: s, d)
@@ -473,27 +480,28 @@ module Make_Machine (B : Bytecode) = struct
                 | TCA k :: c, e, v :: `CLS (c',e',k',Strict) :: s, d ->
                     let kr = mk_app k' (typeof v) in
                     let kd = mk_dom k in
-                    aux (CAS::TCA (compose k kr):: c, e, v::`TYP kd::`CLS (c',e',k',Static) :: s, d)
+                    let v' = applycast v kd in
+                        aux (c', v'::e', s, dump (compose k kr) d)
+                    (* aux (CAS::TCA (compose k kr):: c, e, v::`TYP kd::`CLS (c',e',k',Static) :: s, d) *)
 
-                | CAS :: c, e, `CST b :: `TYP k :: s, d ->
-                    let (t,_) = eval k in
+                (* | CAS :: c, e, `CST b :: `TYP k :: s, d ->
+                    let t = eval_1 k in
                     if subtype (constant b) (ceil t)
                     then aux (c, e, `CST b :: s, d)
                     else aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d)
 
                 | CAS :: c, e, `CLS (c',e',k,_) :: `TYP k':: s, d ->
-                    let (_,t2') = eval k' in
+                    let t2' = eval_2 k' in
                     if is_bottom t2' then
                     aux ([], empty_env, `FAIL :: s, Frame (c, e) :: d)
-                    else
-                    let kc = compose k k' in
-                    aux (c, e, `CLS (c',e',kc,Strict) :: s, d)
+                    else let kc = compose k k' in
+                    aux (c, e, `CLS (c',e',kc,Strict) :: s, d) *)
 
-                | CAS :: c, e,  (`PAIR (_,_) as v) :: `TYP k:: s, d ->
+                | CAS :: c, e,  v :: `TYP k:: s, d ->
                     let v' = applycast v k in
                     begin match v' with
                     | `FAIL -> aux ([], empty_env, `FAIL :: s, Frame (c,e) :: d)
-                    | _ -> aux (c, e, v' :: s, d) end
+                    | _ -> aux (c, e, v'::s, d) end
 
                 | LET :: c, e, v :: s, d ->
                     aux (c, v :: e, s, d)
@@ -567,6 +575,7 @@ module Make_Machine (B : Bytecode) = struct
         fun code params ->
 #ifndef BENCH
             begin
+            (if !(params.debug) then Printf.printf "Bytecode:\n%s" (show_bytecode 1 code));
             run_params.debug := !(params.debug);
             run_params.verbose := !(params.verbose);
             run_params.step_mode := !(params.step_mode);
@@ -610,3 +619,4 @@ end
 
 module Machine = Make_Machine(Bytecode_Eager)
 module Machine_Symbolic = Make_Machine(Bytecode_Symbolic)
+module Machine_Symbolic_Cap = Make_Machine(Bytecode_Symbolic_Cap)
