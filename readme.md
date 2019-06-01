@@ -16,7 +16,7 @@ Install dependencies:
     opam install menhir cppo core_bench
 ```
 
-To build, use the makefile (which is an interface to **dune**):
+To build, use the makefile:
 ```
     make
 ```
@@ -24,11 +24,11 @@ To run it
 ```
     ./cast.exe --load <some file>
 ```
-Or to try the repl
+Or try the repl
 ```
     ./cast.exe
 ```
-To check on tail call elimination :
+To check on an example of tail call elimination :
 ```
     ./cast.exe --load tests/factorial2.gcl --monitor
 ```
