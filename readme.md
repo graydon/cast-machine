@@ -9,7 +9,6 @@ Dependencies:
 - **cduce** version 1.0, which should be compiled and installed by hand using the **cduce-next** branch of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce)
 - **menhir**
 - **cppo**
-- **core_bench** for benchmarking
 
 Install dependencies:
 ```
