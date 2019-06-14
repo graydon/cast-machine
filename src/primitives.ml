@@ -4,6 +4,7 @@ let zero = CD.Types.Integer CD.Intervals.V.zero
 let one = CD.Types.Integer (CD.Intervals.V.succ CD.Intervals.V.zero)
 let mult = CD.Intervals.V.mult
 let add = CD.Intervals.V.add
+let div = CD.Intervals.V.div
 let (mod) = CD.Intervals.V.modulo
 let sub = CD.Intervals.V.sub
 let var = CD.Types.var
@@ -78,12 +79,9 @@ let fresh_dyn () = var (fresh_dyn_var ())
 
 let fresh_var_type () = CD.Types.var (fresh_var ())
 
-    
-
 exception Expression_Syntax_Error
 exception Type_Syntax_Error of string
 exception Empty_Program
-
 
 (* from the idea of using an atom to encode dynamic types *)
 (*

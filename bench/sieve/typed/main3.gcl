@@ -29,8 +29,7 @@ the return type of count_from *)
 
 let rec count_from : Int -> Stream(Int) = fun n ->
     let thunk = fun () -> count_from (n+1) in
-    let st = make_stream (n % ?) (thunk % ?)
-        in (st % Stream(Int)) in
+    ((make_stream (n % ?) (thunk % ?)) % Stream(Int)) in
 
 let rec sift : Int -> Stream(Int) -> Stream(Int) = fun n st ->
     let (hd, tl) = stream_unfold (st % ?) in

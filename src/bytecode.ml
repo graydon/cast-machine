@@ -26,7 +26,10 @@ module Pair : Cast_Representation = struct
     let eval_2 = fun (_,t) -> t
     let mk_kappa = fun x -> x
     let mk_dom (_,t2) = (t2,dom t2)
-    let mk_app (t1,_) t = let tr = result t1 t in (tr,dom tr) 
+    let mk_app (t1,_) t = 
+        (* let () = print_endline "Using Pair mk_app" in  *)
+        (* let () = print_endline (pp_tau t1) in  *)
+        let tr = result t1 t in (tr,dom tr) 
     let compose k1 k2 =let (t1,t2) = eval k1 in
         let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
 end
@@ -47,7 +50,7 @@ module Symbol : Cast_Representation = struct
         | Dom k -> dom (eval_2 k)
         | App (k,t) -> let t1 = eval_1 k in dom (result t1 t)
 
-    let rec eval = function
+    let eval = function
         | Pair (t1, t2) -> (t1, t2)
         | Dom k -> let t2 = eval_2 k in (t2, dom t2)
         | App (k,t) -> let t1 = eval_1 k in
@@ -59,7 +62,9 @@ module Symbol : Cast_Representation = struct
 
     let mk_kappa (t1,t2) = Pair (t1,t2)
     let mk_dom k = Dom k 
-    let mk_app k t = App (k,t)
+    let mk_app k t = 
+        (* let () = print_endline "Using Symbolic mk_app" in *)
+        App (k,t)
     let compose k1 k2 = let (t1,t2) = eval k1 in
         let (t3,t4) = eval k2 in mk_kappa ((cap t1 t3), (cap t2 t4))
 end
@@ -100,7 +105,9 @@ module Symbol_Cap : Cast_Representation = struct
 
     let mk_kappa (t1,t2) = Pair (t1,t2)
     let mk_dom k = Dom k 
-    let mk_app k t = App (k,t)
+    let mk_app k t = 
+        (* let () = print_endline "Using symcap mk_app" in *)
+        App (k,t)
     let compose k1 k2 = Cap (k1,k2)
 end
 
@@ -121,13 +128,14 @@ module type Bytecode = sig
             | CAS                     (* kappa *)
             | TCA of kappa              (* tailcast *)
             | RET
-            | SUC | PRE | MUL | ADD | SUB | MOD
+            | SUC | PRE | MUL | ADD | SUB | MOD | DIV
             | LET
             | END
             | EQB
             | IFZ of byte list * byte list
             | UNI
             | MKP | FST | SND
+            | MKA | GET | SET
             (* | LER of var letrec *)
 
     and bytecode = byte list
@@ -158,13 +166,15 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
               | CAS                     (* kappa *)
               | TCA of kappa              (* tailcast *)
               | RET
-              | SUC | PRE | MUL | ADD | SUB | MOD
+              | SUC | PRE | MUL | ADD | SUB | MOD | DIV
               | LET
               | END
               | EQB
               | IFZ of byte list * byte list
               | UNI
               | MKP | FST | SND
+              | MKA | GET | SET
+
               (* | LER of var letrec *)
 
     and bytecode = byte list
@@ -180,6 +190,9 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
             | FST ->   "FST" | SND   -> "SND" | CAS ->   "CAS" | TAP ->   "TAILAPP"
             | MKP ->   "make_pair" | TCA k ->  
                 Printf.sprintf "TAILCAST %s" (show_kappa k)
+            | MKA -> "make_arr"
+            | SET -> "set"
+            | GET -> "get"
             | CLS (btc, k) ->
                 begin match verb with
                 | 0 -> "CLS"
@@ -198,7 +211,7 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
                     (show_kappa k)  end *)
             | APP ->   "APP"
             | RET ->   "RET"
-            | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB"
+            | SUC ->   "SUC" | MUL -> "MUL" | ADD -> "ADD" | SUB -> "SUB" | DIV -> "DIV"
             | PRE ->   "PRE"
             | LET -> "LET" 
             | END -> "END"
@@ -210,6 +223,7 @@ module Make_Bytecode (M : Cast_Representation) : Bytecode = struct
                 | _ ->
                 Printf.sprintf "IFZ (%s , %s)"
                 (show_bytecode verb btc1) (show_bytecode verb btc2) end
+            | _->"not implem"
 
         and show_bytecode verb btc = 
             "[ " ^ String.concat " ; " 

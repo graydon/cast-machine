@@ -16,18 +16,19 @@
 %token PAROPEN PARCLOSE
 %token CAST FUN ARROW REC TIMES PRED SUCC FST SND
 %token BRACKOPEN BRACKCLOSE
+%token GET_ARR MAKE_ARR SET_ARR
 
 
 %token <string> IDENT
 %token <string> PAT 
 %token EOL ENDEXPR
 %token LET EQ IN 
-%token IF THEN ELSE PLUS MINUS MOD
+%token IF THEN ELSE PLUS MINUS MOD DIV
 
 %left IN
 %left IDENT
 %nonassoc PARCLOSE ELSE FUN
-%left PLUS MINUS EQ
+%left PLUS MINUS EQ DIV
 %nonassoc ARROW
 %nonassoc CAP CUP
 %nonassoc CAST 
@@ -84,6 +85,12 @@ primop:
 			{ Fst e }
 	| SND e=expr
 			{ Snd e }
+	| SET_ARR a=a_expr i=a_expr v=a_expr
+			{ Set (a, i, v) }
+	| GET_ARR a=a_expr i=a_expr
+			{ Get (a, i) }
+	| MAKE_ARR n=a_expr
+			{ Make (n) }
 
 app_expr:
 	| e=a_expr 
@@ -113,7 +120,7 @@ fun_expr:
 	| FUN xs=id_list fun_delim e=expr
 			{ let rec currify e = function
 				| [] -> e
-				| x :: xs -> Mu (qfun (), fresh_var (), x, currify e xs)
+				| x :: xs -> Mu (qmark (), fresh_var (), x, currify e xs)
 			  in currify e xs }
 
 id_list:
@@ -139,6 +146,8 @@ binop:
 		{ Mult (e1, e2) }
 	| e1=expr PLUS e2=expr
 		{ Plus (e1, e2) }
+	| e1=expr DIV e2=expr
+		{ Div (e1, e2) }
 	| e1=expr MINUS e2=expr
 		{ Minus (e1, e2) }
 	| e1=expr EQ e2=expr
@@ -154,12 +163,10 @@ let_pattern:
 			{ Let (x, e1, e2) }
 	| LET ioption(REC) f=var COLON t=pat EQ FUN x=var fun_delim e1=expr IN e2=expr
 			{ Let (f, Mu (t, f, x, e1), e2) }
-	| LET ioption(REC) f=var COLON t1=pat EQ FUN t2=pat  x=var fun_delim e1=expr IN e2=expr
+	| LET ioption(REC) f=var COLON t1=pat EQ FUN t2=pat x=var fun_delim e1=expr IN e2=expr
 			{ Let (f, Mu (cap t1 t2, f, x, e1), e2) }
 	| LET ioption(REC) f=var x=var EQ e1=expr IN e2=expr
-			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
-	| LET ioption(REC) f=var x=var EQ e1=expr IN e2=expr
-			{ Let (f, Mu (qfun (), f, x, e1), e2) } 
+			{ Let (f, Mu (qmark (), f, x, e1), e2) } 
 	| LET REC f=var EQ e1=expr IN e2=expr
 			{ match e1 with
 				| Mu (t, _, x, e) -> Let (f, Mu (t, f, x, e), e2)
@@ -168,6 +175,8 @@ let_pattern:
 			{ match e1 with
 				| Mu (t, _, x, e) -> Let (f, Mu (cap t1 t, f, x, e), e2)
 			  	| e1' -> Let (f, e1', e2) }
+	| LET UNIT EQ e1=expr IN e2=expr
+			{ Seq (e1, e2) }
 	
 
 fun_delim : DOT {} | ARROW {}

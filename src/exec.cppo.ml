@@ -7,12 +7,12 @@ open Bytecode_Eager
 open Syntax.Eager
 
 (* #define MONITOR "1" *)
-#define BENCH "1"
+(* #define BENCH "1" *)
 (* #define DEBUG "1" *)
 
 (* module Env = struct
     include Hashtbl.Make(struct
-        type t = var
+        `type `t = var
         let equal = (=)
         let hash = Hashtbl.hash
     end)
@@ -39,10 +39,11 @@ module Make_Machine (B : Bytecode) = struct
 
     and stack_item =
         [ `CST of b
-        | `FCST of int * (stack_item list -> stack_item)
+        | `FCST of (b -> b)
         | `CLS of bytecode * env * kappa * mark
         | `ACLS of int * bytecode * env * kappa * mark
         | `TYP of kappa
+        | `ARR of b array
         | `FAIL
         | `PAIR of stack_item * stack_item
         ]
@@ -69,7 +70,7 @@ module Make_Machine (B : Bytecode) = struct
     let n_t_dyn = neg t_dyn
 
     let rec typeof : stack_item -> t = function
-        | `CST b -> cap (cap (constant b) (t_dyn)) n_t_dyn
+        | `CST b -> cap (constant b) (t_dyn)
         | `CLS (_, _, k, _) -> eval_1 k
         | `ACLS (_,_,_,k,_) -> eval_1 k
         | `PAIR (v1, v2) -> pair (typeof v1) (typeof v2)
@@ -100,11 +101,11 @@ module Make_Machine (B : Bytecode) = struct
             | `FAIL, _ -> `FAIL
             | _, `FAIL -> `FAIL
             | _ -> `PAIR (cv1, cv2) end
-        | `CLS (c,e,k',m) ->
+        | `CLS (c,e,k',_) ->
             if td = t_bot then `FAIL
             else let kc = compose k k' in
             `CLS (c,e,kc,Strict)
-        | `ACLS (n,c,e,k',m) ->
+        | `ACLS (n,c,e,k',_) ->
             if td = t_bot then `FAIL
             else let kc = compose k k' in
             `ACLS (n,c,e,kc,Strict)
@@ -115,6 +116,7 @@ module Make_Machine (B : Bytecode) = struct
     module Print = struct
         let rec show_stack_value : stack_item -> string = function
         | `CST b -> pp_b b
+        | `FCST _ -> ""
         | `CLS (btc, env, ts, m) ->
             Printf.sprintf "C(%s, %s, %s, %s)"
             (show_bytecode 2 btc) (show_env 1  env)
@@ -128,6 +130,7 @@ module Make_Machine (B : Bytecode) = struct
         | `PAIR (v1, v2) ->
             Printf.sprintf "(%s, %s)" (show_stack_value v1)
             (show_stack_value v2)
+        | `ARR _ ->"[a]"
 
         and sh_env_v : int -> stack_item -> string =
         function
@@ -145,7 +148,8 @@ module Make_Machine (B : Bytecode) = struct
         | `FAIL -> "Fail"
         | `PAIR (v1, v2) as v ->
             Printf.sprintf "%s = (%s, %s)" (pp_tau @@ typeof v)
-            (show_result v1) (show_result v2) 
+            (show_result v1) (show_result v2)
+        | `ARR _ -> "[a]" 
         | _ -> failwith "not a return value"
 
         and show_env verb ?inline:(i=true) : env -> string = fun e ->
@@ -179,6 +183,11 @@ module Make_Machine (B : Bytecode) = struct
         | `PAIR (v1, v2) -> 
             Printf.sprintf "(%s, %s)" (show_stack_value_1 v1)
             (show_stack_value_1 v2)
+        | `ARR a -> 
+            "[" ^ (String.concat ";" (Array.to_list (
+                Array.map (fun v -> pp_b v) a
+            ))) ^ "]"
+        | _->"not implem"
 
         let show_stack s verbose = 
         let show_stack_val = begin match verbose with
@@ -266,8 +275,7 @@ module Make_Machine (B : Bytecode) = struct
         in aux 0 
 
         let count_bound dmp : int = 
-            List.fold_left (fun n e -> match e with | Boundary t -> n+1 | _ -> n) 0 dmp
-
+            List.fold_left (fun n e -> match e with | Boundary _ -> n+1 | _ -> n) 0 dmp
 
         let longest_proxy : stack -> int = 
             let rec aux max acc = function
@@ -283,7 +291,7 @@ module Make_Machine (B : Bytecode) = struct
 
         let env_length : env -> int = List.length
         let dump_length d = List.fold_left 
-                (fun n -> function | Frame (c,e) -> env_length e + n
+                (fun n -> function | Frame (_,e) -> env_length e + n
                                    | _ -> n) 0 d
         let dump_frame_length d = List.length d
 
@@ -370,7 +378,6 @@ module Make_Machine (B : Bytecode) = struct
     end
 
     module Transitions = struct
-        open Print
         open MetricsDebug
 
         exception Machine_Stack_Overflow of int * int
@@ -454,15 +461,34 @@ module Make_Machine (B : Bytecode) = struct
                     aux (c', v :: e', s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
+                    (* let (ta1,ta2) = eval k in
+                    let () = print_endline "Debug tau" in
+                    let () = print_endline (pp_tau ta1) in
+                    let () = print_endline (pp_tau ta2) in 
+                    let tv = typeof v in *)
+                    (* let () = print_endline "Debug typeof v" in *)
+                    (* let () = print_endline (pp_tau tv) in *)
                     let kr = mk_app k (typeof v) in
+                    (* let (t1,t2) = eval kr in 
+                    let () = print_endline "Debug tau circ bool" in
+                    let () = print_endline (pp_tau t1) in
+                    let () = print_endline (pp_tau t2) in *)
                     let kd = mk_dom k in
                     let v' = applycast v kd in
                         aux (c', v'::e', `TYP kr::s, Frame(CAS::c,e)::d)
 
+                | APP :: c, e, `CST b :: `FCST o :: s, d ->
+                    let b' = o b in 
+                    aux (c, e, `CST b' :: s, d)
+
                 | TAP :: _, _,  v :: `CLS (c', e', _, Static) :: s, d ->
                     aux (c', v :: e', s, d)
+                
+                | TAP :: _, e,  `CST c :: `FCST o :: s, d ->
+                    let c' = o c in
+                    aux ([RET], e, `CST c' :: s, d)
 
-                | TAP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
+                | TAP :: _, _,  v :: `CLS (c', e', k, Strict) :: s, d ->
                     let kr = mk_app k (typeof v) in
                     let kd = mk_dom k in
                     let v' = applycast v kd in
@@ -477,7 +503,7 @@ module Make_Machine (B : Bytecode) = struct
                 | TCA k::_, _, v::`CLS (c',e',_,Static)::s, d ->
                     aux (c', v::e', s, dump k d)
 
-                | TCA k :: c, e, v :: `CLS (c',e',k',Strict) :: s, d ->
+                | TCA k :: _, _, v :: `CLS (c',e',k',Strict) :: s, d ->
                     let kr = mk_app k' (typeof v) in
                     let kd = mk_dom k in
                     let v' = applycast v kd in
@@ -506,7 +532,7 @@ module Make_Machine (B : Bytecode) = struct
                 | LET :: c, e, v :: s, d ->
                     aux (c, v :: e, s, d)
 
-                | END :: c, v :: e, s, d ->
+                | END :: c, _ :: e, s, d ->
                     aux (c, e, s, d)
 
                 | MKP :: c, e, v2 :: v1 :: s, d ->
@@ -531,14 +557,33 @@ module Make_Machine (B : Bytecode) = struct
                     let ieq = if i1 = i2 then zero else one in
                     aux (c, e, `CST ieq :: s, d)
 
+                | EQB :: c, e, `CST b1 :: `CST b2 :: s, d ->
+                    let ieq = if b1 = b2 then zero else one in
+                    aux (c, e, `CST ieq :: s, d)
+
                 | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (add i1 i2)) :: s, d)
+
+                | DIV :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
+                    aux (c, e, `CST (Integer (div i2 i1)) :: s, d)
 
                 | MOD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (i2 mod i1)) :: s, d)
 
                 | SUB :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (sub i2 i1)) :: s, d)
+
+                | MKA :: c, e, `CST (Integer n) :: s, d ->
+                    let v = Array.make (CD.Intervals.V.get_int n) zero in
+                    aux (c, e, `ARR v :: s, d)
+
+                | GET :: c, e, `CST (Integer i) :: `ARR a :: s, d ->
+                    let v = a.(CD.Intervals.V.get_int i) in 
+                    aux (c, e, `CST v :: s, d)
+
+                | SET::c,e,`CST(Integer i)::`ARR a::`CST v::s, d ->
+                    let () =  Array.set a (CD.Intervals.V.get_int i) v in
+                    aux (c, e, s , d)
 
                 | IFZ (c1, _) :: c, e, `CST b :: s, d
                     when b = Primitives.zero ->
@@ -567,8 +612,13 @@ module Make_Machine (B : Bytecode) = struct
     let finish = function
         | _, _, [v], _ -> v
         | [], _, `FAIL::_,_ -> `FAIL
-        | _, _, _ :: _ :: _, _ -> failwith "unfinished computation"
-        | _ -> failwith "no return value"
+        | c, _, s, d -> begin
+            print_endline (show_bytecode 1 c);
+            print_endline (show_stack s 1);
+            print_endline (show_dump 1 d);
+            failwith "unfinished computation"
+            end
+        (* | _ -> failwith "no return value" *)
 
 
     let wrap_run : bytecode -> parameters_structure -> unit =
@@ -597,7 +647,7 @@ module Make_Machine (B : Bytecode) = struct
                 let print_max (ls,fmt) = 
                     let (step_max, size_max) = max cmp_tuple ls in
                     Printf.printf fmt (string_of_int size_max) (string_of_int step_max) in
-
+                let _ =
                 List.map print_max
                 [met.stack_sizes, "Stack max size:               %s at step %s\n";
                  met.dump_sizes, "Dump env max size:       %s at step %s\n";
@@ -605,7 +655,8 @@ module Make_Machine (B : Bytecode) = struct
                  met.dump_bounds, "Dump casts max :       %s at step %s\n"; 
                  met.longest_proxies, "Longest proxy size:           %s at step %s\n" ;
                  met.casts, "Largest amount of casts size: %s at step %s\n" ;
-                 met.env_sizes, "Env max size: %s at step %s\n"];
+                 met.env_sizes, "Env max size: %s at step %s\n"]
+                 in ();
 
                 (* let instr_counts = met.instructions in
                 let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in

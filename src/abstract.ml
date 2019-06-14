@@ -50,7 +50,7 @@ module Abstract = struct
     match e with
     | Cst k ->                val_step (`Cst k, rho, ctx, ka)
     | Var x ->                val_step (Env.find rho x, rho, ctx, ka)
-    | Lam (_, x, m) ->        val_step (`Cls (x, m, rho), rho, ctx, ka)
+    (* | Lam (_, x, m) ->        val_step (`Cls (x, m, rho), rho, ctx, ka) *)
     | App (l, m)    ->        term_step (l, rho, LeftSquare (m, ctx), ka)
     | Cast (m, c) 
       when ctx = Nothing ->   term_step (m, rho, Nothing, cast c ka)

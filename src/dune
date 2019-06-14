@@ -13,4 +13,4 @@
 (library
     (name cast)
     (libraries threads cduce)
-    (modules abstract parser bytecode syntax types primitives utils lexer interpreter compile exec errors))
+    (modules abstract parser bytecode syntax types primitives utils lexer interpreter compile exec errors benchmark))

@@ -33,30 +33,37 @@ let eval_with_parameters params e =
   then (print_string "Program: "; print_e e; print_endline "") in
   if !(params.machine) != "" then
   begin
-    if !(params.symbolic) != "" then 
+    (* let () = print_endline (!(params.symbolic)) in *)
+    if not (String.equal !(params.symbolic) "") then 
+      let () = print_endline "Symbolic execution" in
       let open Exec.Machine_Symbolic in 
       let open Compile.Compile_Symbolic in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
       let e = transform e in
       let btc = compile Nil e in
+      let () = if !(params.debug) then print_endline "Done compiling." in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
       (* let () = if !(params.debug) then print_endline (show_bytecode btc) in *)
       wrap_run btc params end
-    else if !(params.symbolic_cap) != "" then 
+    else if not (String.equal !(params.symbolic_cap) "") then 
+      let () = print_endline "Symbolic Cap execution" in
       let open Exec.Machine_Symbolic_Cap in 
       let open Compile.Compile_Symbolic_Cap in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
       let e = transform e in
       let btc = compile Nil e in
+            let () = if !(params.debug) then print_endline "Done compiling." in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
       (* let () = if !(params.debug) then print_endline (show_bytecode btc) in *)
       wrap_run btc params end
     else 
+      let () = print_endline "Pair execution" in
       let open Exec.Machine in 
       let open Compile.Compile in begin
       let () = if !(params.debug) then print_endline "Compiling.." in
       let e = transform e in
       let btc = compile Nil e in
+            let () = if !(params.debug) then print_endline "Done compiling." in
       let () = if !(params.debug) then print_endline "Running bytecode.." in
       wrap_run btc params end
 
@@ -102,7 +109,6 @@ let rec repl () =
     print_endline @@ "error: can't parse program {" ^ !user_input ^ "}";
     user_input := "";
     repl () 
-  | _ -> repl ()
   
 
 (* parse a lexbuf, and return a more explicit error when it fails *)

@@ -1,4 +1,4 @@
-.PHONY: main main_byte web clean
+.PHONY: main bench main_byte web clean
 
 CDUCE := $(shell ocamlfind query cduce)
 
@@ -9,6 +9,16 @@ main:
 	-cflags '-I '${CDUCE} \
 	-lflags '-I '${CDUCE}' 'cduce_lib.cmxa  \
 	-package expat -package pxp -package curl,camlp4.lib,num,dynlink
+
+bench:
+	@echo "Compiling in BENCH mode; no debug output"
+	cppo -D BENCH ${CURDIR}/src/exec.cppo.ml -o ${CURDIR}/src/exec.ml
+	ocamlbuild -use-menhir -use-ocamlfind -I src main.native \
+	-cflags '-w -58' \
+	-cflags '-I '${CDUCE} \
+	-lflags '-I '${CDUCE}' 'cduce_lib.cmxa  \
+	-package expat -package pxp -package curl,camlp4.lib,num,dynlink
+
 
 byte:
 	cppo ${CURDIR}/src/exec.cppo.ml -o ${CURDIR}/src/exec.ml

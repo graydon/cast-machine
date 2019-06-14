@@ -4,7 +4,6 @@ open Print
 
 module Make_Compile (B : Bytecode) = struct
     open Syntax.Eager
-    open Syntax.Eager.Print
     open B
 
     type rho = Nil | Var of var * rho
@@ -22,6 +21,7 @@ module Make_Compile (B : Bytecode) = struct
 
     let get_cons : e -> byte = function
         | App _ ->   APP
+        | Div _ -> DIV
         | Succ _ ->  SUC
         | Pred _ ->  PRE
         | Mult _ ->  MUL
@@ -42,6 +42,9 @@ module Make_Compile (B : Bytecode) = struct
         | Nil -> ""
         | Var (y, r) -> (pp_var y) ^ "." ^ (show_rho r)
 
+    let builtins = 
+        ["hd", fun c -> c]
+
     let rec compile r (e : e) : bytecode = 
         (* print_endline "";
         print_endline (show_e e);
@@ -54,7 +57,7 @@ module Make_Compile (B : Bytecode) = struct
             [CST c]
         | App (e1, e2) ->               
             (compile r e1) @ (compile r e2) @ [APP]
-        | Apply (n, t, f, e, xs, es) -> 
+        | Apply (n, t, f, e, xs, _) -> 
             (* let () = Printf.printf "Adding vars ...\n" in      *)
             let r1 = extend_rho xs r in 
             let r2 = mk_rho r1 f in
@@ -82,7 +85,7 @@ module Make_Compile (B : Bytecode) = struct
             failwith "letrec should all be eliminated at compile"
         | Ifz (cond, e1, e2) ->         
             (compile r cond) @ [IFZ (compile r e1, compile r e2)]
-        | Mult (e1,e2) | Plus (e1,e2) 
+        | Mult (e1,e2) | Plus (e1,e2) | Div (e1,e2)
         | Mod (e1,e2) | Minus (e1,e2) 
         | Eq (e1,e2) as e ->           
             (* let () = print_endline "Eq" in *)
@@ -90,6 +93,15 @@ module Make_Compile (B : Bytecode) = struct
         | LetP ((x, y), e1, e2) -> 
             let p = Primitives.fresh_var () in 
             compile r @@ Let (p, e1, Let (x, Fst (Var p), Let (y, Snd (Var p), e2)))
+        | Make (n) ->
+            compile r n @ [MKA]
+        | Get (a, i) ->
+            compile r a @ (compile r i) @ [GET]
+        | Set (a, i, v) ->
+            compile r v @ (compile r a) @ (compile r i) @ [SET]
+        | Seq (e1, e2) -> 
+            compile r e1 @ (compile r e2)
+        | _->failwith "not implem compil"
 
     and tail_compile r : e -> bytecode = function
         | Cast (App (e1,e2), k) -> 

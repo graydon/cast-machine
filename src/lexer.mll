@@ -1,5 +1,3 @@
-(* This file was copied from Tommaso's setvariants *)
-
 {
 
 	open Lexing
@@ -31,6 +29,9 @@ let trim_dollar s =
 			("succ", 				SUCC);
 			("fst", 				FST);
 			("snd", 				SND);
+			("get",		  		GET_ARR);
+			("make", 				MAKE_ARR);
+			("set", 				SET_ARR)
 			(* ("and",					AND) *)
 			]
 
@@ -99,6 +100,7 @@ rule token = parse
 	| '*'							{ TIMES }
 	| '?'							{ QMARK }
 	| '+'							{ PLUS }
+	| "/"							{ DIV }
 	| '-'							{ MINUS }
 	| '='							{ EQ }
 	| ','							{ COMMA }

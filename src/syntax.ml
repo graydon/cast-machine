@@ -56,8 +56,9 @@ module type Cast_Expr = sig
     type castkind
     
     type e = 
-            | Var of var
+      | Var of var
       | Cst of b
+      | FCst of (b -> b)
       | Pair of e * e
       | Let of var * e * e
       | LetP of (var * var) * e * e
@@ -67,9 +68,11 @@ module type Cast_Expr = sig
       | Apply of int * tau * var * e * var list * e list
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e 
-      | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
+      | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e | Div of e * e 
       | Ifz of e * e * e
       | Eq of e * e
+      | Set of e * e * e | Make of e | Get of e * e
+      | Seq of e * e
       (* | Unit *)
      type prog =
 		| Expr of e
@@ -91,6 +94,7 @@ struct
     type e = 
       | Var of var
       | Cst of b
+      | FCst of (b -> b)
       | Pair of e * e
       | Let of var * e * e
       | LetP of (var * var) * e * e
@@ -100,9 +104,12 @@ struct
       | Apply of int * tau * var * e * var list * e list
       | Cast of e * castkind
       | Succ of e | Pred of e | Fst of e | Snd of e 
-      | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e
+      | Mult of e * e | Plus of e * e | Minus of e * e | Mod of e * e | Div of e * e
       | Ifz of e * e * e
       | Eq of e * e
+      | Set of e * e * e | Make of e | Get of e * e
+      | Seq of e * e
+
       (* | Unit *)
       (* | TwoCast of e * tau * tau  *)
         (* for now no product, let and type abstraction *)
@@ -149,6 +156,7 @@ module Eager = struct
             |Cast (_, _)
             |Succ _ -> "Succ"
             |Pred _ -> "Pred"
+            | _->"no implem"
 
         let rec pprint_e : e -> string = fun e ->
             let rec aux offset = function
@@ -206,6 +214,16 @@ module Eager = struct
                 Printf.sprintf "%s + %s" (pprint_e e1) (pprint_e e2)
             | Minus (e1, e2) ->
                 Printf.sprintf "%s - %s" (pprint_e e1) (pprint_e e2)
+            | Make (e) ->
+                Printf.sprintf "Array.make %s" (pprint_e e)
+            | Set (e1,e2,e3) ->
+                Printf.sprintf "Array.set %s %s %s" (pprint_e e1) (pprint_e e2)
+                (pprint_e e3)
+            | Get (a,i) ->
+                Printf.sprintf "Array.get %s %s" (pprint_e a) (pprint_e i)
+            | Seq (e1, e2) ->
+                Printf.sprintf "%s ; %s" (pprint_e e1) (pprint_e e2)
+            | _->"not implem"
         in aux "" e
             (* | `Prd (e1, e2) ->
                 Printf.sprintf "(%s, %s)" (pprint_e e1) (pprint_e e2)
@@ -293,6 +311,7 @@ struct
                 Printf.sprintf "succ %s" (pprint_e e)
             | Pred (e) ->
                 Printf.sprintf "pred %s" (pprint_e e)
+            | _->"not implem"
 
             (* | `Prd (e1, e2) ->
                 Printf.sprintf "(%s, %s)" (pprint_e e1) (pprint_e e2)

@@ -166,14 +166,14 @@ module Eager_Calculus = struct
             | `Fail -> `Fail end
         | App (e1, e2) ->
             exec_info.inline := true;
-            let rec enter_closure : v -> v = function
+            let enter_closure : v -> v = function
             | `Cst _ -> failwith "error: trying to result a constant"
             | `Pair _ -> failwith "error: trying to result a pair"
             | `Fail -> `Fail
             (* | `RClosure (f, a1, a2, env) as rcls ->
                 let env' = Env.add f rcls env in
                 enter_closure (`Closure (a1, a2, env')) *)
-            | `Closure (((_,f, x, e') , (tau1, tau2, _), env')) -> 
+            | `Closure (((_,_, x, e') , (tau1, tau2, _), env')) -> 
                 let v = aux env e2 in
                 let v0 = aux env (Cast (e2, (tau2, dom tau2))) in
                 let env'' = Env.add x v0 env' in
@@ -202,6 +202,7 @@ module Eager_Calculus = struct
                 | `Fail -> `Fail (* trying to result `Fail as a function *)
                 end
             in enter_closure (aux env e1)
+        | _->failwith "not implemented"
         
         in aux Env.empty e 
         
@@ -283,6 +284,7 @@ module Symbolic_Calculus = struct
         | `Closure (e', sigma2, env') ->
             `Closure (e', comp sigma1 sigma2, env') 
         | `Fail -> `Fail end
+    |_->failwith "not implemented"
     (* | App (e1, e2) ->
         begin match (eval_aux env e1) with
         | `Cst _ -> failwith "error: trying to result a constant"
