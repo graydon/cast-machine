@@ -1,0 +1,16 @@
+let o = fun ((Int -> Int) & (Bool -> Bool)) x ->
+    if x = `true then `true
+    else if x = `false then `false
+    else 42
+
+in
+
+let f : Int -> ((Int -> Int) & (Bool -> Bool)) = fun x ->
+    let g : Int -> ? = fun x ->
+        if x = 0 then o
+        else (f (x-1))
+    in
+    if x = 0 then o
+    else ((g x) % ((Int -> Int) & (Bool -> Bool)))
+
+in (f 20000000) 0;;
