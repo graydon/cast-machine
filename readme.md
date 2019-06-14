@@ -6,17 +6,16 @@ Working on `ocaml 4.07.0`.
 
 Dependencies: 
 - **opam**
-- **cduce** version 1.0, either the **cduce-next** or the **setvariants** branches of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce)
+- **cduce** version 1.0, which should be compiled and installed by hand using the **cduce-next** branch of the [repo](https://gitlab.math.univ-paris-diderot.fr/cduce/cduce)
 - **menhir**
 - **cppo**
-- **core_bench** for benchmarking
 
 Install dependencies:
 ```
     opam install menhir cppo core_bench
 ```
 
-To build, use the makefile (which is an interface to **dune**):
+To build, use the makefile:
 ```
     make
 ```
@@ -24,11 +23,11 @@ To run it
 ```
     ./cast.exe --load <some file>
 ```
-Or to try the repl
+Or try the repl
 ```
     ./cast.exe
 ```
-To check on tail call elimination :
+To check on an example of tail call elimination :
 ```
     ./cast.exe --load tests/factorial2.gcl --monitor
 ```
