@@ -7,4 +7,5 @@ let rec odd : Int -> ? =
     in
     if n then `false
     else even (n-1)
-in odd 10000000;;
+in odd 10;;
+(*in odd 10000000;;*)

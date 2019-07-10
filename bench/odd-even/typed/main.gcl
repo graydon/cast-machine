@@ -1,10 +1,11 @@
 (* mutual tail recursive functions example *)
 let rec odd : Int -> ? =
     fun n ->
-    let rec even : Int -> Bool = fun n ->
-        if n then `true
-        else ((odd (n-1)) % Bool)
+    let rec even : Int -> Bool = fun k ->
+        if k then `true
+        else ((odd (k-1)) % Bool)
     in
     if n then `false % ?
     else ((even (n-1)) % ?)
-in odd 10000000;;
+in odd 10000;;
+(*in odd 10000000;;*)

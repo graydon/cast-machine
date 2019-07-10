@@ -19,4 +19,5 @@ let add_typedefs env s =
 
 (** builtin type Stream **)
 let builtins = 
-  ["type Stream('a) = ('a, ([] -> Stream('a)))"]
+  ["type Stream('a) = ('a, ([] -> Stream('a)))";
+    "type Tree = (Int, (Tree, Tree)) | (Int, `nil) | `nil"]

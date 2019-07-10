@@ -150,7 +150,7 @@ print(cell_text)
 # summary=pd.DataFrame(bench_data['time'].describe())
 # bench_data.plot(x="bench", y="time", kind="bar", table=True,ax=axs[0])
 
-# fig, ax = plt.subplots(1, 1, figsize = (40, 22), dpi=250)
+# fig, ax = plt.subplots(1, 1, figsize = (40, 22), dpidpi=250)
 # ax = fig.add_subplot(111)
 g = sns.catplot(x="bench", y="time", hue="runtime", data=bench_data, 
     height=6, kind="bar", palette="rocket")

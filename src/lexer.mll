@@ -74,7 +74,7 @@ let ppitem					= ppcst|ppvar|ppstr|"[]"|"()"
 										|"Any"|"Empty"|"Int"|"Byte"
 										|"Arrow"|"Char"|"Atom"|"Pair"
 										|"Record"|"String"|"Latin1"
-										|"Bool"|"Float"|"AnyXml"|"Bottom"
+										|"Bool"|"Float"|"AnyXml"|"Bottom"|"Tree"
 										(* |"Namespaces"|"Abstract"
 										|"Caml_int"|"In_channel"
 										|"Out_channel"  *)

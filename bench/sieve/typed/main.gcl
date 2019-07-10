@@ -33,6 +33,7 @@ let rec sieve : ? -> ? = fun st ->
 
 let primes = sieve (count_from 2) in
 
-let n = 1000 in 
+(* let n = 1000 in *)
+let n = 200 in 
 
 stream_get primes n;;

@@ -301,6 +301,7 @@ module Make_Machine (B : Bytecode) = struct
             fun run_params -> let met = run_params.metrics in
             fun (c, e, s, d) ->
             begin
+            (* let () = print_endline "coucou" in *)
             met.dump_bounds<-  (!(run_params.step), count_bound d) :: met.dump_bounds;
             met.env_sizes <- (!(run_params.step), List.length e) :: met.env_sizes;
             met.stack_sizes <- (!(run_params.step), (List.length s)) :: met.stack_sizes;
@@ -313,6 +314,7 @@ module Make_Machine (B : Bytecode) = struct
             let cnt_inst =
                 (try MetricsEnv.find met.instructions instr
                 with Not_found -> 0) in
+            let () = Printf.printf "counting one instruction %s" (show_byte 1 instr) in
             MetricsEnv.replace met.instructions instr (cnt_inst+1)
             end
 
@@ -396,10 +398,14 @@ module Make_Machine (B : Bytecode) = struct
 
         let run_procedures state =
         begin
+            (* let () = print_endline "coucou" in *)
             run_params.step := !(run_params.step)+1;
-            if !(run_params.monitor) then gather_metrics run_params state;
+            (* if !(run_params.monitor) then gather_metrics run_params state; *)
+#ifndef MONITOR
             if !(run_params.debug) then print_debug_run run_params state;
-            run_check run_params state;
+            (* run_check run_params state; *)
+#endif
+(* #ifdef STEPMODE *)
             let ref_state = ref state in
                 if !(run_params.step_mode)
                 && !(run_params.step) >= !(run_params.step_start) then
@@ -421,6 +427,10 @@ module Make_Machine (B : Bytecode) = struct
                     else run_params.states <- state :: run_params.states
                 end;
                 !ref_state
+(* #endif *)
+(* #ifndef STEPMODE *)
+            (* state *)
+(* #endif *)
         end
 
 
@@ -429,11 +439,13 @@ module Make_Machine (B : Bytecode) = struct
         let run code env =
             let rec aux : state -> state = fun state ->
 #ifndef BENCH
+            (* let () = print_endline "hello" in *)
             let state = run_procedures state in
 #endif
-#ifdef MONITOR
-            gather_metrics run_params state;
-#endif
+(* #ifdef MONITOR *)
+            (* let () = print_endline "coucou" in *)
+            (* gather_metrics run_params state; *)
+(* #endif *)
             match state with
                 | c, `FAIL ::e, s, d ->
                     aux ([],empty_env,`FAIL::s,Frame(c,e)::d)
@@ -453,11 +465,9 @@ module Make_Machine (B : Bytecode) = struct
                     aux (c, e, `TYP k :: s, d)
 
                 | APP :: c, e,  v :: `CLS (c', e', _, Static)  :: s, d ->
-(* #ifndef DEBUG
-                    let () = print_endline "\n=====\nDebug:" in
+                    (* let () = print_endline "\n=====\nDebug:" in
                     let () = Printf.printf "Dump extended with code: %s" (show_bytecode 1 c) in
-                    let () = Printf.printf "and environment e[%i] = %s" (List.length e) (show_env 1  e) in
-#endif *)
+                    let () = Printf.printf "and environment e[%i] = %s" (List.length e) (show_env 1  e) in *)
                     aux (c', v :: e', s, Frame (c, e) :: d)
 
                 | APP :: c, e,  v :: `CLS (c', e', k, Strict) :: s, d ->
@@ -561,6 +571,10 @@ module Make_Machine (B : Bytecode) = struct
                     let ieq = if b1 = b2 then zero else one in
                     aux (c, e, `CST ieq :: s, d)
 
+                | EQB :: c, e, v1 :: v2 :: s, d ->
+                    let ieq = if v1 = v2 then zero else one in
+                    aux (c, e, `CST ieq :: s, d)
+
                 | ADD :: c, e, `CST (Integer i1) :: `CST (Integer i2) :: s, d ->
                     aux (c, e, `CST (Integer (add i1 i2)) :: s, d)
 
@@ -657,11 +671,12 @@ module Make_Machine (B : Bytecode) = struct
                  met.casts, "Largest amount of casts size: %s at step %s\n" ;
                  met.env_sizes, "Env max size: %s at step %s\n"]
                  in ();
+                (* let () = print_endline "debug" in *)
 
-                (* let instr_counts = met.instructions in
+                let instr_counts = met.instructions in
                 let l_instr_counts = List.of_seq (MetricsEnv.to_seq instr_counts) in
                 List.iter (fun (by, cnt) ->
-                        printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts; *)
+                        printf "\n%i     %s" cnt (show_byte 0 by)) l_instr_counts;
                 print_endline "\n=============\n============="; 
                 run_params.metrics <- init_metrics ()
                 end
